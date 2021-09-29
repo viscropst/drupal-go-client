@@ -114,9 +114,7 @@ func TestFieldToTypeValue(t *testing.T) {
 	em := &EntityManager{
 		client: c,
 	}
-	entity, err := em.Request("node", "banner", map[string]string{
-		"include": "field_banner_image",
-	}).Load("6085d170-5ec1-4a22-b69e-ecdd41242eab")
+	entity, err := em.Request("node", "banner").Load("6085d170-5ec1-4a22-b69e-ecdd41242eab", JQ().Include([]string{"field_banner_image"}))
 	if err != nil {
 		t.Fatal(err)
 	}

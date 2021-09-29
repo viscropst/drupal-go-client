@@ -67,18 +67,17 @@ func NewEM(client *resty.Client) *EntityManager {
 	return &EntityManager{client: client}
 }
 
-func (e *EntityManager) Request(t, b string, params map[string]string) EntityRequest {
+func (e *EntityManager) Request(t, b string) EntityRequest {
 	return &EntityJsonapiRequest{
 		em:         e,
 		entityType: t,
 		bundle:     b,
-		params:     params,
 	}
 }
 
 type EntityRequest interface {
 	Create(entity EntityCompatible) error
-	Load(id string) (EntityCompatible, error)
+	Load(id string, query JsonapiQuery) (EntityCompatible, error)
 	LoadMultiple(query JsonapiQuery) ([]EntityCompatible, error)
 	GetQuery() JsonapiQuery
 }
@@ -87,16 +86,15 @@ type EntityJsonapiRequest struct {
 	em         *EntityManager
 	entityType string
 	bundle     string
-	params     map[string]string
 }
 
 func (e *EntityJsonapiRequest) Create(en EntityCompatible) error {
 	panic("not implemented")
 }
 
-func (e *EntityJsonapiRequest) Load(id string) (EntityCompatible, error) {
+func (e *EntityJsonapiRequest) Load(id string, q JsonapiQuery) (EntityCompatible, error) {
 	resp, err := e.em.client.R().
-		SetQueryParams(e.params).
+		SetQueryParams(q.QueryParams()).
 		SetHeader("Accept", "application/json").
 		Get(fmt.Sprintf("/%s/%s/%s", e.entityType, e.bundle, id))
 	if err != nil {

@@ -1,6 +1,9 @@
 package drupal_go_client
 
-import "strings"
+import (
+	"fmt"
+	"strings"
+)
 
 type JsonapiQuery interface {
 	QueryParams() map[string]string
@@ -32,7 +35,7 @@ func (q *Query) Sort(s []string) JsonapiQuery {
 }
 
 func (q *Query) Page(offset, limit int) JsonapiQuery {
-	q.params["page[offset]"] = string(rune(offset))
-	q.params["page[limit]"] = string(rune(limit))
+	q.params["page[offset]"] = fmt.Sprint(offset)
+	q.params["page[limit]"] = fmt.Sprint(limit)
 	return q
 }
