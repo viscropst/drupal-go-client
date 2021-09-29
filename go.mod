@@ -1,4 +1,4 @@
-module gitlab.com/beehplus/drupal-go-client
+module github.com/wangxb07/drupal-go-client
 
 go 1.16
 
