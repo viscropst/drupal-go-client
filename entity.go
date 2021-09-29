@@ -63,7 +63,11 @@ type EntityManager struct {
 	client *resty.Client
 }
 
-func (e *EntityManager) GetRequest(t, b string, params map[string]string) EntityRequest {
+func NewEM(client *resty.Client) *EntityManager {
+	return &EntityManager{client: client}
+}
+
+func (e *EntityManager) Request(t, b string, params map[string]string) EntityRequest {
 	return &EntityJsonapiRequest{
 		em:         e,
 		entityType: t,

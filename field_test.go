@@ -114,7 +114,7 @@ func TestFieldToTypeValue(t *testing.T) {
 	em := &EntityManager{
 		client: c,
 	}
-	entity, err := em.GetRequest("node", "banner", map[string]string{
+	entity, err := em.Request("node", "banner", map[string]string{
 		"include": "field_banner_image",
 	}).Load("6085d170-5ec1-4a22-b69e-ecdd41242eab")
 	if err != nil {

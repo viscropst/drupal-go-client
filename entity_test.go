@@ -20,7 +20,7 @@ func TestLoad(t *testing.T) {
 	em := &EntityManager{
 		client: c,
 	}
-	got, err := em.GetRequest("node", "po", nil).Load("da58cbf5-83a4-4850-8a6f-8d7618483ff6")
+	got, err := em.Request("node", "po", nil).Load("da58cbf5-83a4-4850-8a6f-8d7618483ff6")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -155,7 +155,7 @@ func TestLoadMultiple(t *testing.T) {
 		Sort([]string{"created"})
 
 	entities, err := em.
-		GetRequest("node", "banner", nil).
+		Request("node", "banner", nil).
 		LoadMultiple(q)
 	if err != nil {
 		t.Fatal(err)
