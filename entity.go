@@ -21,6 +21,10 @@ type Entity struct {
 	payload *jsonapi.OnePayload
 }
 
+func (e *Entity) Marshal(v *Stub) ([]byte, error) {
+	panic("implement me")
+}
+
 func (e *Entity) Type() string {
 	return e.payload.Data.Type
 }
@@ -32,6 +36,7 @@ func (e *Entity) ID() string {
 func (e *Entity) GetField(f string) (*Field, error) {
 	a, ok := e.payload.Data.Attributes[f]
 
+	// attributes fields
 	if ok {
 		return &Field{
 			raw:            a,
@@ -41,6 +46,7 @@ func (e *Entity) GetField(f string) (*Field, error) {
 		}, nil
 	}
 
+	// relationship fields
 	r, ok := e.payload.Data.Relationships[f]
 	if ok {
 		return &Field{

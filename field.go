@@ -7,6 +7,8 @@ import (
 	"github.com/google/jsonapi"
 )
 
+var supportDataTypes = []string{"string", "int32", "int64", "float32", "float64", "file", "bool", "raw"}
+
 type Field struct {
 	raw        interface{}
 	name       string
