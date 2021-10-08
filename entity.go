@@ -5,7 +5,12 @@ import (
 	"fmt"
 	"github.com/go-resty/resty/v2"
 	"github.com/google/jsonapi"
+	"reflect"
 )
+
+type Schema struct {
+	fields []*FieldType
+}
 
 type EntityWritable interface {
 	Save() error
@@ -15,6 +20,7 @@ type EntityCompatible interface {
 	Type() string
 	ID() string
 	GetField(f string) (*Field, error)
+	GetSchema() (*Schema, error)
 }
 
 type Entity struct {
@@ -58,6 +64,25 @@ func (e *Entity) GetField(f string) (*Field, error) {
 	}
 
 	return nil, fmt.Errorf("field %s not existed", f)
+}
+
+func (e *Entity) GetSchema() (*Schema, error) {
+	schema := new(Schema)
+
+	schema.fields = make([]*FieldType, 0)
+	for name, attr := range e.payload.Data.Attributes {
+		if attr == nil {
+			continue
+		}
+
+		f := &FieldType{
+			t:    reflect.TypeOf(attr),
+			name: name,
+		}
+		schema.fields = append(schema.fields, f)
+	}
+
+	return schema, nil
 }
 
 func (e *Entity) Payload() *jsonapi.OnePayload {

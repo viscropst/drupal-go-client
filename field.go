@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/google/jsonapi"
+	"reflect"
 )
 
 var supportDataTypes = []string{"string", "int32", "int64", "float32", "float64", "file", "bool", "raw"}
@@ -15,6 +16,11 @@ type Field struct {
 	refPayload *jsonapi.OnePayload
 
 	IsRelationship bool
+}
+
+type FieldType struct {
+	t    reflect.Type
+	name string
 }
 
 type File struct {

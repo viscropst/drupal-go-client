@@ -6,9 +6,15 @@ import (
 	"fmt"
 )
 
+const (
+	NoMappingModeIgnore   = "ignore"
+	NoMappingModeOriginal = "original"
+)
+
 //{
 //   "entity_type": "node",
 //   "bundle": "article",
+//   "no_mapping_mode": "ignore|original"
 //   "mapping": {
 //     "field_image": {
 //        "type": "file"
@@ -27,8 +33,9 @@ type StubFieldMapper struct {
 }
 
 type Stub struct {
-	EntityType string `json:"entity_type"`
-	Bundle     string `json:"bundle"`
+	EntityType    string `json:"entity_type"`
+	Bundle        string `json:"bundle"`
+	NoMappingMode string `json:"no_mapping_mode,omitempty"`
 
 	Mapping map[string]StubFieldMapper `json:"mapping"`
 }
@@ -78,54 +85,54 @@ func entityStubMarshal(entity EntityCompatible, stubs StubConfigs) ([]byte, erro
 		return nil, errors.New("stub config not existed")
 	}
 
+	if stub.NoMappingMode == "" {
+		stub.NoMappingMode = NoMappingModeOriginal
+	}
+
 	resMap := make(map[string]interface{})
 	for s, d := range stub.Mapping {
 		if field, err := entity.GetField(s); err != nil {
 			return nil, fmt.Errorf("entity get field: %v", err)
 		} else {
-			var r interface{}
-			switch d.Type {
-			case "string":
-				if r, err = field.String(); err != nil {
-					return nil, fmt.Errorf("field to string: %v", err)
+			if r, err := getEntityFieldValue(d.Type, field); err != nil {
+				return nil, fmt.Errorf("get entity field value: %v", err)
+			} else {
+				resMap[d.Name] = r
+			}
+		}
+	}
+
+	switch stub.NoMappingMode {
+	case NoMappingModeOriginal:
+		schema, err := entity.GetSchema()
+		if err != nil {
+			return nil, fmt.Errorf("get schema: %v", err)
+		}
+
+		for _, f := range schema.fields {
+			noMapping := true
+			for s, _ := range stub.Mapping {
+				if f.name == s {
+					noMapping = false
+					break
 				}
-				break
-			case "int32":
-				if r, err = field.Int32(); err != nil {
-					return nil, fmt.Errorf("field to int32: %v", err)
-				}
-				break
-			case "int64":
-				if r, err = field.Int64(); err != nil {
-					return nil, fmt.Errorf("field to int32: %v", err)
-				}
-				break
-			case "float32":
-				if r, err = field.Float32(); err != nil {
-					return nil, fmt.Errorf("field to float32: %v", err)
-				}
-				break
-			case "float64":
-				if r, err = field.Float64(); err != nil {
-					return nil, fmt.Errorf("field to float64: %v", err)
-				}
-				break
-			case "file":
-				if r, err = field.File(); err != nil {
-					return nil, fmt.Errorf("field to file: %v", err)
-				}
-				break
-			case "bool":
-				if r, err = field.Bool(); err != nil {
-					return nil, fmt.Errorf("field to bool: %v", err)
-				}
-				break
-			default:
-				r = field.Raw()
 			}
 
-			resMap[d.Name] = r
+			if noMapping {
+				field, err := entity.GetField(f.name)
+				if err != nil {
+					return nil, fmt.Errorf("no mapping get field: %v", err)
+				}
+				r, err := getEntityFieldValue(f.t.String(), field)
+				if err != nil {
+					return nil, fmt.Errorf("no mapping get entity field value: %v", err)
+				}
+				resMap[f.name] = r
+			}
 		}
+		break
+	case NoMappingModeIgnore:
+		break
 	}
 
 	if res, err := json.Marshal(resMap); err != nil {
@@ -133,4 +140,50 @@ func entityStubMarshal(entity EntityCompatible, stubs StubConfigs) ([]byte, erro
 	} else {
 		return res, nil
 	}
+}
+
+func getEntityFieldValue(t string, field *Field) (interface{}, error) {
+	var err error
+	var r interface{}
+	switch t {
+	case "string":
+		if r, err = field.String(); err != nil {
+			return nil, fmt.Errorf("field to string: %v", err)
+		}
+		break
+	case "int32":
+		if r, err = field.Int32(); err != nil {
+			return nil, fmt.Errorf("field to int32: %v", err)
+		}
+		break
+	case "int64":
+		if r, err = field.Int64(); err != nil {
+			return nil, fmt.Errorf("field to int32: %v", err)
+		}
+		break
+	case "float32":
+		if r, err = field.Float32(); err != nil {
+			return nil, fmt.Errorf("field to float32: %v", err)
+		}
+		break
+	case "float64":
+		if r, err = field.Float64(); err != nil {
+			return nil, fmt.Errorf("field to float64: %v", err)
+		}
+		break
+	case "file":
+		if r, err = field.File(); err != nil {
+			return nil, fmt.Errorf("field to file: %v", err)
+		}
+		break
+	case "bool":
+		if r, err = field.Bool(); err != nil {
+			return nil, fmt.Errorf("field to bool: %v", err)
+		}
+		break
+	default:
+		r = field.Raw()
+	}
+
+	return r, nil
 }

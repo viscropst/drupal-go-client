@@ -104,7 +104,12 @@ func Test_entityStubMarshal(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	stubs, err := NewStubConfigsFromJSON(fixture.NodeBannerTestSubConfigsJSON())
+	stubs1, err := NewStubConfigsFromJSON(fixture.NodeBannerTestSubConfigsJSON())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	stubs2, err := NewStubConfigsFromJSON(fixture.NodeBannerTestNoMappingIgnoreSubConfigsJSON())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -123,7 +128,15 @@ func Test_entityStubMarshal(t *testing.T) {
 			name: "node article marshal",
 			args: args{
 				entity: entity,
-				stubs: *stubs,
+				stubs: *stubs1,
+			},
+			want: []byte(`{"banner_image":{"fid":"db3b76f9-5020-47fb-beb0-5c5966c9740c","langcode":"en","filename":"WechatIMG8660.jpeg","uri":{"value":"public://2021-09/WechatIMG8660.jpeg","url":"/sites/default/files/2021-09/WechatIMG8660.jpeg"},"filemime":"image/jpeg","filesize":296160,"status":true,"created":"2021-09-29T17:49:45+00:00","changed":"2021-09-29T17:50:19+00:00"},"body":{"format":"fuwenben","processed":"\u003cp\u003etest\u003c/p\u003e\n","summary":"","value":"\u003cp\u003etest\u003c/p\u003e\r\n"},"changed":"2021-09-29T17:50:53+00:00","created":"2021-09-29T17:49:27+00:00","default_langcode":true,"drupal_internal__nid":9999,"drupal_internal__vid":10263,"langcode":"en","link":{"options":[],"title":"","uri":"internal:/pages/topic/topic"},"promote":true,"revision_timestamp":"2021-09-29T17:50:53+00:00","revision_translation_affected":true,"status":true,"sticky":false,"title":"test"}`),
+			wantErr: false,
+		},{
+			name: "no mapping mode ignore",
+			args: args{
+				entity: entity,
+				stubs: *stubs2,
 			},
 			want: []byte(`{"banner_image":{"fid":"db3b76f9-5020-47fb-beb0-5c5966c9740c","langcode":"en","filename":"WechatIMG8660.jpeg","uri":{"value":"public://2021-09/WechatIMG8660.jpeg","url":"/sites/default/files/2021-09/WechatIMG8660.jpeg"},"filemime":"image/jpeg","filesize":296160,"status":true,"created":"2021-09-29T17:49:45+00:00","changed":"2021-09-29T17:50:19+00:00"},"link":{"options":[],"title":"","uri":"internal:/pages/topic/topic"}}`),
 			wantErr: false,
