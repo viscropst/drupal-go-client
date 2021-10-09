@@ -108,9 +108,10 @@ func (e *EntityManager) Request(t, b string) EntityRequest {
 
 type EntityRequest interface {
 	Create(entity EntityCompatible) error
+	Update(entity EntityCompatible) error
+	Delete(entity EntityCompatible) error
 	Load(id string, query JsonapiQuery) (EntityCompatible, error)
 	LoadMultiple(query JsonapiQuery) ([]EntityCompatible, error)
-	GetQuery() JsonapiQuery
 }
 
 type EntityJsonapiRequest struct {
@@ -119,7 +120,15 @@ type EntityJsonapiRequest struct {
 	bundle     string
 }
 
-func (e *EntityJsonapiRequest) Create(en EntityCompatible) error {
+func (e *EntityJsonapiRequest) Update(entity EntityCompatible) error {
+	panic("implement me")
+}
+
+func (e *EntityJsonapiRequest) Delete(entity EntityCompatible) error {
+	panic("implement me")
+}
+
+func (e *EntityJsonapiRequest) Create(entity EntityCompatible) error {
 	panic("not implemented")
 }
 
@@ -169,8 +178,4 @@ func (e *EntityJsonapiRequest) LoadMultiple(q JsonapiQuery) ([]EntityCompatible,
 	}
 
 	return res, nil
-}
-
-func (e EntityJsonapiRequest) GetQuery() JsonapiQuery {
-	panic("not implemented")
 }

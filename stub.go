@@ -1,9 +1,12 @@
 package drupal_go_client
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/google/jsonapi"
+	"reflect"
 )
 
 const (
@@ -79,6 +82,129 @@ type EntityStubMarshaler interface {
 	Marshal(v *Stub) ([]byte, error)
 }
 
+func entityStubUnmarshal(b []byte, stubs StubConfigs) (*jsonapi.OnePayload, error) {
+	srcMap := make(map[string]interface{})
+	if err := json.Unmarshal(b, &srcMap); err != nil {
+		return nil, fmt.Errorf("unarmshal src map: %v", err)
+	}
+
+	entityID, ok := srcMap["id"]
+	if !ok {
+		return nil, errors.New("src []byte not include entity id")
+	}
+
+	id, ok := entityID.(string)
+	if !ok {
+		return nil, errors.New("entity id in src must be string")
+	}
+
+	entityType, ok := srcMap["type"]
+	if !ok {
+		return nil, errors.New("src []byte not include entity type")
+	}
+
+	t, ok := entityType.(string)
+	if !ok {
+		return nil, errors.New("entity type in src must be string")
+	}
+
+	stub, ok := stubs[t]
+	if !ok {
+		return nil, errors.New("stub config not existed")
+	}
+
+	payload := &jsonapi.OnePayload{
+		Data: &jsonapi.Node{
+			Type: t,
+			ID:   id,
+		},
+	}
+
+	fields := make(map[string]interface{})
+	for k, v := range srcMap {
+		noMapping := true
+		for sk, sv := range stub.Mapping {
+			if k == sv.Name {
+				noMapping = false
+				fields[sk] = v
+				break
+			}
+		}
+
+		if noMapping {
+			fields[k] = v
+		}
+	}
+
+	delete(fields, "id")
+	delete(fields, "type")
+
+	attrs := make(map[string]interface{})
+	relationships := make(map[string]interface{})
+	for k, v := range fields {
+		vt := reflect.TypeOf(v)
+
+		switch vt.Kind() {
+		case reflect.Map:
+			if n, err := shallowNodeFromMap(v); err == nil {
+				relationships[k] = jsonapi.OnePayload{
+					Data: n,
+				}
+				break
+			}
+		case reflect.Slice:
+			s := reflect.ValueOf(v)
+
+			data := make([]*jsonapi.Node, 0)
+			for i := 0; i < s.Len(); i++ {
+				if n, err := shallowNodeFromMap(s.Index(i).Interface()); err == nil {
+					data = append(data, n)
+				}
+			}
+
+			if len(data) == s.Len() {
+				relationships[k] = jsonapi.ManyPayload{
+					Data: data,
+				}
+				break
+			}
+		default:
+			attrs[k] = v
+		}
+	}
+
+	payload.Data.Attributes = attrs
+	payload.Data.Relationships = relationships
+
+	return payload, nil
+}
+
+func shallowNodeFromMap(v interface{}) (*jsonapi.Node, error) {
+	vt := reflect.TypeOf(v)
+	vv := reflect.ValueOf(v)
+
+	if vt.Kind() != reflect.Map {
+		return nil, errors.New("value is not a Map")
+	}
+
+	for _, k := range vv.MapKeys() {
+		if k.String() != "id" && k.String() != "type" {
+			return nil, errors.New("jsonapi node must include id and type")
+		}
+	}
+
+	shallowNode := new(jsonapi.Node)
+	buf := bytes.NewBuffer(nil)
+	if err := json.NewEncoder(buf).Encode(v); err != nil {
+		return nil, err
+	}
+
+	if err := json.NewDecoder(buf).Decode(shallowNode); err != nil {
+		return nil, err
+	}
+	return shallowNode, nil
+}
+
 func entityStubMarshal(entity EntityCompatible, stubs StubConfigs) ([]byte, error) {
 	stub, ok := stubs[entity.Type()]
 	if !ok {
@@ -90,6 +216,9 @@ func entityStubMarshal(entity EntityCompatible, stubs StubConfigs) ([]byte, erro
 	}
 
 	resMap := make(map[string]interface{})
+	resMap["id"] = entity.ID()
+	resMap["type"] = entity.Type()
+
 	for s, d := range stub.Mapping {
 		if field, err := entity.GetField(s); err != nil {
 			return nil, fmt.Errorf("entity get field: %v", err)
