@@ -88,16 +88,6 @@ func entityStubUnmarshal(b []byte, stubs StubConfigs) (*jsonapi.OnePayload, erro
 		return nil, fmt.Errorf("unarmshal src map: %v", err)
 	}
 
-	entityID, ok := srcMap["id"]
-	if !ok {
-		return nil, errors.New("src []byte not include entity id")
-	}
-
-	id, ok := entityID.(string)
-	if !ok {
-		return nil, errors.New("entity id in src must be string")
-	}
-
 	entityType, ok := srcMap["type"]
 	if !ok {
 		return nil, errors.New("src []byte not include entity type")
@@ -116,8 +106,15 @@ func entityStubUnmarshal(b []byte, stubs StubConfigs) (*jsonapi.OnePayload, erro
 	payload := &jsonapi.OnePayload{
 		Data: &jsonapi.Node{
 			Type: t,
-			ID:   id,
 		},
+	}
+
+	entityID, ok := srcMap["id"]
+	if ok {
+		payload.Data.ID, ok = entityID.(string)
+		if !ok {
+			return nil, errors.New("entity id in src must be string")
+		}
 	}
 
 	fields := make(map[string]interface{})

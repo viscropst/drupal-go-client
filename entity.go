@@ -1,7 +1,6 @@
 package drupal_go_client
 
 import (
-	"encoding/json"
 	"fmt"
 	"github.com/go-resty/resty/v2"
 	"github.com/google/jsonapi"
@@ -92,6 +91,7 @@ func (e *Entity) Payload() *jsonapi.OnePayload {
 type EntityManager struct {
 	// Resty Client
 	client *resty.Client
+	stubs  *StubConfigs
 }
 
 func NewEM(client *resty.Client) *EntityManager {
@@ -107,7 +107,7 @@ func (e *EntityManager) Request(t, b string) EntityRequest {
 }
 
 type EntityRequest interface {
-	Create(entity EntityCompatible) error
+	Create(b []byte) error
 	Update(entity EntityCompatible) error
 	Delete(entity EntityCompatible) error
 	Load(id string, query JsonapiQuery) (EntityCompatible, error)
@@ -128,43 +128,68 @@ func (e *EntityJsonapiRequest) Delete(entity EntityCompatible) error {
 	panic("implement me")
 }
 
-func (e *EntityJsonapiRequest) Create(entity EntityCompatible) error {
-	panic("not implemented")
+func (e *EntityJsonapiRequest) Create(b []byte) error {
+	payload, err := entityStubUnmarshal(b, *e.em.stubs)
+	if err != nil {
+		return fmt.Errorf("entity unmarshal with stub: %v", err)
+	}
+
+	resp, err := e.em.client.R().
+		SetHeader("Content-Type", "application/vnd.api+json").
+		SetHeader("Accept", "application/vnd.api+json").
+		SetError(&jsonapi.ErrorsPayload{}).
+		SetBody(payload).
+		Post(fmt.Sprintf("/%s/%s", e.entityType, e.bundle))
+	if err != nil {
+		return fmt.Errorf("load %s", err)
+	}
+
+	jsonapiErr, ok := resp.Error().(*jsonapi.ErrorsPayload)
+	if ok && len(jsonapiErr.Errors) > 0 {
+		return jsonapiErr.Errors[0]
+	}
+
+	return nil
 }
 
 func (e *EntityJsonapiRequest) Load(id string, q JsonapiQuery) (EntityCompatible, error) {
 	resp, err := e.em.client.R().
 		SetQueryParams(q.QueryParams()).
-		SetHeader("Accept", "application/json").
+		SetHeader("Accept", "application/vnd.api+json").
+		SetError(&jsonapi.ErrorsPayload{}).
+		SetResult(&jsonapi.OnePayload{}).
 		Get(fmt.Sprintf("/%s/%s/%s", e.entityType, e.bundle, id))
 	if err != nil {
 		return nil, fmt.Errorf("load %s", err)
 	}
 
-	p := jsonapi.OnePayload{}
-	if err := json.Unmarshal(resp.Body(), &p); err != nil {
-		return nil, fmt.Errorf("unmarshal to one payload: %v", err)
+	jsonapiErr, ok := resp.Error().(*jsonapi.ErrorsPayload)
+	if ok && len(jsonapiErr.Errors) > 0 {
+		return nil, jsonapiErr.Errors[0]
 	}
 
-	return &Entity{payload: &p}, nil
+	return &Entity{payload: resp.Result().(*jsonapi.OnePayload)}, nil
 }
 
 func (e *EntityJsonapiRequest) LoadMultiple(q JsonapiQuery) ([]EntityCompatible, error) {
 	resp, err := e.em.client.R().
 		SetQueryParams(q.QueryParams()).
-		SetHeader("Accept", "application/json").
+		SetHeader("Accept", "application/vnd.api+json").
+		SetError(&jsonapi.ErrorsPayload{}).
+		SetResult(&jsonapi.ManyPayload{}).
 		Get(fmt.Sprintf("/%s/%s", e.entityType, e.bundle))
 	if err != nil {
 		return nil, fmt.Errorf("loadMultiple %s", err)
 	}
 
-	p := jsonapi.ManyPayload{}
-	if err := json.Unmarshal(resp.Body(), &p); err != nil {
-		return nil, fmt.Errorf("unmarshal to one payload: %v", err)
+	jsonapiErr, ok := resp.Error().(*jsonapi.ErrorsPayload)
+	if ok && len(jsonapiErr.Errors) > 0 {
+		return nil, jsonapiErr.Errors[0]
 	}
 
 	// ManyPayload to OnePayload slice
 	res := make([]EntityCompatible, 0)
+	p := resp.Result().(*jsonapi.ManyPayload)
 	for _, n := range p.Data {
 		entity := &Entity{
 			payload: &jsonapi.OnePayload{

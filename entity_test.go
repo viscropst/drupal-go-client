@@ -9,7 +9,6 @@ import (
 
 func TestLoad(t *testing.T) {
 	c := fixture.NodePoHttpMockWithSingleData()
-
 	em := &EntityManager{
 		client: c,
 	}
@@ -25,6 +24,20 @@ func TestLoad(t *testing.T) {
 	f, _ := got.GetField("title")
 	if f.Raw() != "月饼DIY制作活动" {
 		t.Errorf("Entity Type() want title is \"月饼DIY制作活动\", got %s", f.raw)
+	}
+
+	c2 := fixture.NodePoHttpMockNotFound()
+	em2 := &EntityManager{
+		client: c2,
+	}
+
+	_, err = em2.Request("node", "po").Load("da58cbf5-83a4-4850-8a6f-8d7618483ff7", JQ())
+	if jsonapiErr, ok := err.(*jsonapi.ErrorObject); !ok {
+		t.Errorf("not found error object expected, but got: %v", err)
+	} else {
+		if jsonapiErr.Title != "Not Found" {
+			t.Errorf("err title want Not found, got: %v", jsonapiErr.Title)
+		}
 	}
 }
 
@@ -55,6 +68,25 @@ func TestLoadMultiple(t *testing.T) {
 	s, _ := titleField.String()
 	if s != "test" {
 		t.Errorf("expect title is test, got %s", s)
+	}
+
+	c2 := fixture.NodeBannerHttpMockNotFound()
+	em2 := &EntityManager{
+		client: c2,
+	}
+
+	q2 := JQ().
+		Include([]string{"field_banner_image1"}).
+		Page(0, 10).
+		Sort([]string{"created"})
+
+	_, err = em2.Request("node", "banner").LoadMultiple(q2)
+	if jsonapiErr, ok := err.(*jsonapi.ErrorObject); !ok {
+		t.Errorf("not found error object expected, but got: %v", err)
+	} else {
+		if jsonapiErr.Title != "Bad Request" {
+			t.Errorf("err title want Not found, got: %v", jsonapiErr.Title)
+		}
 	}
 }
 

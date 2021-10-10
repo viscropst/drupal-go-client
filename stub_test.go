@@ -311,7 +311,31 @@ func Test_entityStubUnmarshal(t *testing.T) {
 				b:     []byte(`{"type": "node--article", "title": "JSON:API paints my bikeshed!","bar": "hello world", "author": {"type": "people", "id": "9"}}`),
 				stubs: *stubs1,
 			},
-			want:    nil,
+			want: &jsonapi.OnePayload{
+				Data: &jsonapi.Node{
+					Type: "node--article",
+					Attributes: map[string]interface{}{
+						"title": "JSON:API paints my bikeshed!",
+						"foo":   "hello world",
+					},
+					Relationships: map[string]interface{}{
+						"author": jsonapi.OnePayload{
+							Data: &jsonapi.Node{
+								Type: "people",
+								ID:   "9",
+							},
+						},
+					},
+				},
+			},
+			wantErr: false,
+		},{
+			name: "lose type",
+			args: args{
+				b:     []byte(`{"title": "JSON:API paints my bikeshed!","bar": "hello world", "author": {"type": "people", "id": "9"}}`),
+				stubs: *stubs1,
+			},
+			want: nil,
 			wantErr: true,
 		},
 	}

@@ -1,116 +1,13 @@
 package drupal_go_client
 
 import (
-	"github.com/go-resty/resty/v2"
-	"github.com/jarcoal/httpmock"
+	"github.com/wangxb07/drupal-go-client/fixture"
 	"reflect"
 	"testing"
 )
 
 func TestFieldToTypeValue(t *testing.T) {
-	c := resty.New()
-	httpmock.ActivateNonDefault(c.GetClient())
-
-	fixture := `{
-  "jsonapi": {
-    "version": "1.0"
-  },
-  "data": {
-    "type": "node--banner",
-    "id": "6085d170-5ec1-4a22-b69e-ecdd41242eab",
-    "links": {
-    },
-    "attributes": {
-      "drupal_internal__nid": 9999,
-      "drupal_internal__vid": 10263,
-      "langcode": "en",
-      "revision_timestamp": "2021-09-29T17:50:53+00:00",
-      "revision_log": null,
-      "status": true,
-      "title": "test",
-      "created": "2021-09-29T17:49:27+00:00",
-      "changed": "2021-09-29T17:50:53+00:00",
-      "promote": true,
-      "sticky": false,
-      "default_langcode": true,
-      "revision_translation_affected": true,
-      "body": {
-        "value": "<p>test</p>\r\n",
-        "format": "fuwenben",
-        "processed": "<p>test</p>\n",
-        "summary": ""
-      },
-      "field_banner_link": {
-        "uri": "internal:/pages/topic/topic",
-        "title": "",
-        "options": []
-      }
-    },
-    "relationships": {
-      "uid": {
-        "data": {
-          "type": "user--user",
-          "id": "c862c0f4-9a5b-42ff-be6f-e5d323e90ed9"
-        },
-        "links": {
-        }
-      },
-      "field_banner_image": {
-        "data": {
-          "type": "file--file",
-          "id": "db3b76f9-5020-47fb-beb0-5c5966c9740c",
-          "meta": {
-            "alt": "test banner",
-            "title": "",
-            "width": 1920,
-            "height": 960
-          }
-        },
-        "links": {
-        }
-      }
-    }
-  },
-  "included": [
-    {
-      "type": "file--file",
-      "id": "db3b76f9-5020-47fb-beb0-5c5966c9740c",
-      "links": {
-      },
-      "attributes": {
-        "drupal_internal__fid": 16950,
-        "langcode": "en",
-        "filename": "WechatIMG8660.jpeg",
-        "uri": {
-          "value": "public://2021-09/WechatIMG8660.jpeg",
-          "url": "/sites/default/files/2021-09/WechatIMG8660.jpeg"
-        },
-        "filemime": "image/jpeg",
-        "filesize": 296160,
-        "status": true,
-        "created": "2021-09-29T17:49:45+00:00",
-        "changed": "2021-09-29T17:50:19+00:00"
-      },
-      "relationships": {
-        "uid": {
-          "data": {
-            "type": "user--user",
-            "id": "c862c0f4-9a5b-42ff-be6f-e5d323e90ed9"
-          },
-          "links": {
-          }
-        }
-      }
-    }
-  ],
-  "links": {
-  }
-}`
-	responder := httpmock.NewStringResponder(200, fixture)
-	fakeUrl := "https://milliface-base.beehomeplus.cn/jsonapi/node/banner/6085d170-5ec1-4a22-b69e-ecdd41242eab?include=field_banner_image"
-	httpmock.RegisterResponder("GET", fakeUrl, responder)
-
-	c.SetHostURL("https://milliface-base.beehomeplus.cn/jsonapi")
+	c := fixture.NodeBannerHttpMockWithIncluded()
 	em := &EntityManager{
 		client: c,
 	}
