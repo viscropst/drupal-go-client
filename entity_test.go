@@ -235,13 +235,13 @@ func TestEntityJsonapiRequest_Delete(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name:    "delete",
-			fields:  fields{
+			name: "delete",
+			fields: fields{
 				em:         em,
 				entityType: "node",
 				bundle:     "banner",
 			},
-			args:    args{
+			args: args{
 				id: "d44cb65f-00a1-4eb2-a038-5960833654f1",
 			},
 			wantErr: false,
@@ -258,6 +258,65 @@ func TestEntityJsonapiRequest_Delete(t *testing.T) {
 			}
 			if err = e.WithRequest(origReq).Delete(tt.args.id); (err != nil) != tt.wantErr {
 				t.Errorf("Delete() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestEntityJsonapiRequest_Update(t *testing.T) {
+	c := fixture.UpdateBannerJSONAPIHttpMock()
+
+	stubs1, err := NewStubConfigsFromJSON(fixture.NodeBannerTestSubConfigsJSON())
+	if err != nil {
+		t.Fatal(err)
+	}
+	em := NewEM(c, stubs1)
+
+	origReq, _ := http.NewRequest(http.MethodPost, "http://www.demo.com", nil)
+	origReq.Header.Set("Authorization", "Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiIsImp0aSI6IjBhZDA5OTlkZmQ0ZjRjZDVjNjdjY2NmODA1MzgzYzBmOTg2MWI1OTM4NTMzODQ5Nzg4YTJjOTNhMjRmNzkxMjIzODZlZjEzOTcwYTM3ZWRhIn0.eyJhdWQiOiI0NmFmMzdiNy0xY2E0LTQ1MjYtYTc0My05NDA5NzFmNmMwNDMiLCJqdGkiOiIwYWQwOTk5ZGZkNGY0Y2Q1YzY3Y2NjZjgwNTM4M2MwZjk4NjFiNTkzODUzMzg0OTc4OGEyYzkzYTI0Zjc5MTIyMzg2ZWYxMzk3MGEzN2VkYSIsImlhdCI6MTYzMzkzMDYxMywibmJmIjoxNjMzOTMwNjEzLCJleHAiOjE2MzUxNDAyMTMsInN1YiI6IjQiLCJzY29wZXMiOlsiYXV0aGVudGljYXRlZCIsImJmZiJdLCJ1aWQiOiJjOGJmZjU0Ny0zNjI1LTRlZjgtOTI2OC0yMjc0YzBkMjIzOGIiLCJtYWlsIjoiYmZmQHFxLmNvbSIsInVzZXJuYW1lIjoiYmZmIiwib3BlbmlkIjoiIn0.dI7o5TvInq49F0rTh0WTTlx3Dnn5wZE4bMiar7OO2is3QGlH4Jux3KSTv5af98XrmsVZNeMFz1SKTNOuIEuTNdb7mxCTB1AciQRYzCI7Si5zPiAqvOM0ekSAV2c9XjdfM2iT6fA6-dPhWfG7KPZ5St1ZAzyzua9uUjrQxQoWmP64YEJ6l41tLW7gcABeLxtEP29xeZvMoouWV1K-0j17jzOlAot23_vteu7j6dcpKjTa3XzeFqXzAQlLBNbLTfs7S6HGHZzwGg9H9YIF8dYdsJ8xD9Ps_eXKKOyWmMIH78CWqsRgCjykePQwVI88Hu6bwOrtgdzwpq-nzzFae21oqOyhWbSUSXLf_cXwu-W8ZcJjg9089fIdFYLv3BexXqd4ghG7UjHIxY5vRXBeGcXRcjXr6E70bllhrrUcUbq0YgPxooSdvjrE8EDkCCZXOejSTUb_lX1lvO7w5HlPW69WREHOZVUTbhS8i9Q05YfLe2E7pViQ9NXmW1inecjvJSZdcEohbYw_Apq2Z1dI7tlI7qUN3EjnEYLPeqcugwi_5W4cLLY4m8357VQHxKyyLeJqePd8PqrGnFfkUQrmJesgUTNQaOc7DTLszHdnyLnX20OyLLlOTV1wcrb9LDa8JjXnRMnTSN7xsQ8--f2P5rTbvryjuauND8uWiuEu0RzYKnE")
+
+	type fields struct {
+		em         *EntityManager
+		entityType string
+		bundle     string
+		Req        *http.Request
+		Query      JsonapiQuery
+	}
+	type args struct {
+		id string
+		b  []byte
+	}
+	tests := []struct {
+		name    string
+		fields  fields
+		args    args
+		wantErr bool
+	}{
+		{
+			name: "update",
+			fields: fields{
+				em:         em,
+				entityType: "node",
+				bundle:     "banner",
+			},
+			args: args{
+				id: "34fe2569-18f0-40d9-a727-a274e300d7d6",
+				b:  []byte(`{"id": "34fe2569-18f0-40d9-a727-a274e300d7d6", "type": "node--banner", "title": "banner2"}`),
+			},
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			e := &EntityJsonapiRequest{
+				em:         tt.fields.em,
+				entityType: tt.fields.entityType,
+				bundle:     tt.fields.bundle,
+				Req:        tt.fields.Req,
+				Query:      tt.fields.Query,
+			}
+			if err := e.WithRequest(origReq).Update(tt.args.id, tt.args.b); (err != nil) != tt.wantErr {
+				t.Errorf("Update() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}

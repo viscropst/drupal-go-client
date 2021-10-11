@@ -418,7 +418,7 @@ func CreateBannerJSONAPIHttpMock() *resty.Client {
       }
     },
     "attributes": {
-      "title": "banner1",
+      "title": "banner1"
     }
   },
   "links": {
@@ -447,6 +447,50 @@ func DeleteBannerJSONAPIHttpMock() *resty.Client {
 	httpmock.RegisterResponder(http.MethodDelete, fakeUrl, responder)
 
 	c.SetHostURL("https://milliface-base.beehomeplus.cn/jsonapi")
+
+	return c
+}
+
+func UpdateBannerJSONAPIHttpMock() *resty.Client {
+	c := resty.New()
+	httpmock.ActivateNonDefault(c.GetClient())
+
+	fixture  := `{
+  "jsonapi": {
+    "version": "1.0",
+    "meta": {
+      "links": {
+        "self": {
+          "href": "http://jsonapi.org/format/1.0/"
+        }
+      }
+    }
+  },
+  "data": {
+    "type": "node--banner",
+    "id": "b2f82594-2a85-4d54-a8bb-a3a58c8db9d3",
+    "links": {
+      "self": {
+        "href": "http://milliface-base.beehomeplus.cn/jsonapi/node/banner/b2f82594-2a85-4d54-a8bb-a3a58c8db9d3?resourceVersion=id%3A10439"
+      }
+    },
+    "attributes": {
+      "title": "banner2"
+    }
+  },
+  "links": {
+    "self": {
+      "href": "http://milliface-base.beehomeplus.cn/jsonapi/node/banner"
+    }
+  }
+}`
+	m := make(map[string]interface{})
+	json.Unmarshal([]byte(fixture), &m)
+	responder, _ := httpmock.NewJsonResponder(http.StatusOK, m)
+	fakeUrl := "http://milliface-base.beehomeplus.cn/jsonapi/node/banner/34fe2569-18f0-40d9-a727-a274e300d7d6"
+	httpmock.RegisterResponder(http.MethodPatch, fakeUrl, responder)
+
+	c.SetHostURL("http://milliface-base.beehomeplus.cn/jsonapi")
 
 	return c
 }
