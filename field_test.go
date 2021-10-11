@@ -11,7 +11,9 @@ func TestFieldToTypeValue(t *testing.T) {
 	em := &EntityManager{
 		client: c,
 	}
-	entity, err := em.Request("node", "banner").Load("6085d170-5ec1-4a22-b69e-ecdd41242eab", JQ().Include([]string{"field_banner_image"}))
+	entity, err := em.Request("node", "banner").
+		WithQuery(JQ().Include([]string{"field_banner_image"})).
+		Load("6085d170-5ec1-4a22-b69e-ecdd41242eab")
 	if err != nil {
 		t.Fatal(err)
 	}

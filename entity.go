@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/go-resty/resty/v2"
 	"github.com/google/jsonapi"
+	"net/http"
 	"reflect"
 )
 
@@ -94,8 +95,16 @@ type EntityManager struct {
 	stubs  *StubConfigs
 }
 
-func NewEM(client *resty.Client) *EntityManager {
-	return &EntityManager{client: client}
+func NewEM(client *resty.Client, stubs *StubConfigs) *EntityManager {
+	return &EntityManager{client: client, stubs: stubs}
+}
+
+func (e *EntityManager) GetClient() *resty.Client {
+	return e.client
+}
+
+func (e *EntityManager) GetStubs() *StubConfigs {
+	return e.stubs
 }
 
 func (e *EntityManager) Request(t, b string) EntityRequest {
@@ -108,40 +117,52 @@ func (e *EntityManager) Request(t, b string) EntityRequest {
 
 type EntityRequest interface {
 	Create(b []byte) error
-	Update(entity EntityCompatible) error
-	Delete(entity EntityCompatible) error
-	Load(id string, query JsonapiQuery) (EntityCompatible, error)
-	LoadMultiple(query JsonapiQuery) ([]EntityCompatible, error)
+	Update(id string, b []byte) error
+	Delete(id string) error
+	Load(id string) (EntityCompatible, error)
+	LoadMultiple() ([]EntityCompatible, error)
+
+	WithRequest(req *http.Request) *EntityJsonapiRequest
+	WithQuery(query JsonapiQuery) *EntityJsonapiRequest
 }
 
 type EntityJsonapiRequest struct {
 	em         *EntityManager
 	entityType string
 	bundle     string
+	Req        *http.Request
+	Query      JsonapiQuery
 }
 
-func (e *EntityJsonapiRequest) Update(entity EntityCompatible) error {
-	panic("implement me")
+func (e *EntityJsonapiRequest) WithRequest(req *http.Request) *EntityJsonapiRequest {
+	e.Req = req
+	return e
 }
 
-func (e *EntityJsonapiRequest) Delete(entity EntityCompatible) error {
-	panic("implement me")
+func (e *EntityJsonapiRequest) WithQuery(query JsonapiQuery) *EntityJsonapiRequest {
+	e.Query = query
+	return e
 }
 
-func (e *EntityJsonapiRequest) Create(b []byte) error {
+func (e *EntityJsonapiRequest) Update(id string, b []byte) error {
 	payload, err := entityStubUnmarshal(b, *e.em.stubs)
 	if err != nil {
 		return fmt.Errorf("entity unmarshal with stub: %v", err)
 	}
 
-	resp, err := e.em.client.R().
+	r := e.em.client.R().
 		SetHeader("Content-Type", "application/vnd.api+json").
 		SetHeader("Accept", "application/vnd.api+json").
 		SetError(&jsonapi.ErrorsPayload{}).
-		SetBody(payload).
-		Post(fmt.Sprintf("/%s/%s", e.entityType, e.bundle))
+		SetBody(payload)
+
+	if e.Req != nil && e.Req.Header.Get("Authorization") != "" {
+		r = r.SetHeader("Authorization", e.Req.Header.Get("Authorization"))
+	}
+
+	resp, err := r.Patch(fmt.Sprintf("/%s/%s/%s", e.entityType, e.bundle, id))
 	if err != nil {
-		return fmt.Errorf("load %s", err)
+		return fmt.Errorf("update %s", err)
 	}
 
 	jsonapiErr, ok := resp.Error().(*jsonapi.ErrorsPayload)
@@ -152,13 +173,65 @@ func (e *EntityJsonapiRequest) Create(b []byte) error {
 	return nil
 }
 
-func (e *EntityJsonapiRequest) Load(id string, q JsonapiQuery) (EntityCompatible, error) {
-	resp, err := e.em.client.R().
-		SetQueryParams(q.QueryParams()).
+func (e *EntityJsonapiRequest) Delete(id string) error {
+	r := e.em.client.R().
+		SetHeader("Accept", "application/vnd.api+json").
+		SetError(&jsonapi.ErrorsPayload{})
+	if e.Req != nil && e.Req.Header.Get("Authorization") != "" {
+		r = r.SetHeader("Authorization", e.Req.Header.Get("Authorization"))
+	}
+	resp, err := r.Delete(fmt.Sprintf("/%s/%s/%s", e.entityType, e.bundle, id))
+	if err != nil {
+		return fmt.Errorf("delete %s", err)
+	}
+
+	jsonapiErr, ok := resp.Error().(*jsonapi.ErrorsPayload)
+	if ok && len(jsonapiErr.Errors) > 0 {
+		return jsonapiErr.Errors[0]
+	}
+
+	return nil
+}
+
+func (e *EntityJsonapiRequest) Create(b []byte) error {
+	payload, err := entityStubUnmarshal(b, *e.em.stubs)
+	if err != nil {
+		return fmt.Errorf("entity unmarshal with stub: %v", err)
+	}
+
+	r := e.em.client.R().
+		SetHeader("Content-Type", "application/vnd.api+json").
 		SetHeader("Accept", "application/vnd.api+json").
 		SetError(&jsonapi.ErrorsPayload{}).
-		SetResult(&jsonapi.OnePayload{}).
-		Get(fmt.Sprintf("/%s/%s/%s", e.entityType, e.bundle, id))
+		SetBody(payload)
+
+	if e.Req != nil && e.Req.Header.Get("Authorization") != "" {
+		r = r.SetHeader("Authorization", e.Req.Header.Get("Authorization"))
+	}
+
+	resp, err := r.Post(fmt.Sprintf("/%s/%s", e.entityType, e.bundle))
+	if err != nil {
+		return fmt.Errorf("create %s", err)
+	}
+
+	jsonapiErr, ok := resp.Error().(*jsonapi.ErrorsPayload)
+	if ok && len(jsonapiErr.Errors) > 0 {
+		return jsonapiErr.Errors[0]
+	}
+
+	return nil
+}
+
+func (e *EntityJsonapiRequest) Load(id string) (EntityCompatible, error) {
+	r := e.em.client.R().
+		SetHeader("Accept", "application/vnd.api+json").
+		SetError(&jsonapi.ErrorsPayload{}).
+		SetResult(&jsonapi.OnePayload{})
+	if e.Query != nil {
+		r.SetQueryParams(e.Query.QueryParams())
+	}
+
+	resp, err := r.Get(fmt.Sprintf("/%s/%s/%s", e.entityType, e.bundle, id))
 	if err != nil {
 		return nil, fmt.Errorf("load %s", err)
 	}
@@ -171,13 +244,17 @@ func (e *EntityJsonapiRequest) Load(id string, q JsonapiQuery) (EntityCompatible
 	return &Entity{payload: resp.Result().(*jsonapi.OnePayload)}, nil
 }
 
-func (e *EntityJsonapiRequest) LoadMultiple(q JsonapiQuery) ([]EntityCompatible, error) {
-	resp, err := e.em.client.R().
-		SetQueryParams(q.QueryParams()).
+func (e *EntityJsonapiRequest) LoadMultiple() ([]EntityCompatible, error) {
+	r := e.em.client.R().
+		SetQueryParams(e.Query.QueryParams()).
 		SetHeader("Accept", "application/vnd.api+json").
 		SetError(&jsonapi.ErrorsPayload{}).
-		SetResult(&jsonapi.ManyPayload{}).
-		Get(fmt.Sprintf("/%s/%s", e.entityType, e.bundle))
+		SetResult(&jsonapi.ManyPayload{})
+	if e.Query != nil {
+		r.SetQueryParams(e.Query.QueryParams())
+	}
+
+	resp, err := r.Get(fmt.Sprintf("/%s/%s", e.entityType, e.bundle))
 	if err != nil {
 		return nil, fmt.Errorf("loadMultiple %s", err)
 	}

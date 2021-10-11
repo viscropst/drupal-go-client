@@ -100,7 +100,8 @@ func Test_entityStubMarshal(t *testing.T) {
 	em := &EntityManager{
 		client: fixture.NodeBannerHttpMockWithSingleData(),
 	}
-	entity, err := em.Request("node", "po").Load("da58cbf5-83a4-4850-8a6f-8d7618483ff6", JQ())
+	entity, err := em.Request("node", "po").
+		Load("da58cbf5-83a4-4850-8a6f-8d7618483ff6")
 	if err != nil {
 		t.Fatal(err)
 	}
