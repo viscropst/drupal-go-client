@@ -21,14 +21,15 @@ type EntityCompatible interface {
 	ID() string
 	GetField(f string) (*Field, error)
 	GetSchema() (*Schema, error)
+	Marshal(stubs StubConfigs) ([]byte, error)
 }
 
 type Entity struct {
 	payload *jsonapi.OnePayload
 }
 
-func (e *Entity) Marshal(v *Stub) ([]byte, error) {
-	panic("implement me")
+func (e *Entity) Marshal(stubs StubConfigs) ([]byte, error) {
+	return entityStubMarshal(e, stubs)
 }
 
 func (e *Entity) Type() string {
