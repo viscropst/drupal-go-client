@@ -80,8 +80,61 @@ func NodeBannerHttpMockWithSingleData() *resty.Client {
 	m := make(map[string]interface{})
 	json.Unmarshal([]byte(fixture), &m)
 	responder, _ := httpmock.NewJsonResponder(http.StatusOK, m)
-	fakeUrl := "https://milliface-base.beehomeplus.cn/jsonapi/node/po/da58cbf5-83a4-4850-8a6f-8d7618483ff6"
+	fakeUrl := "https://milliface-base.beehomeplus.cn/jsonapi/node/banner/da58cbf5-83a4-4850-8a6f-8d7618483ff6"
 	httpmock.RegisterResponder("GET", fakeUrl, responder)
+
+	fixtureNilField := `
+{
+  "jsonapi": {
+    "version": "1.0",
+    "meta": {
+      "links": {
+        "self": {
+          "href": "http://jsonapi.org/format/1.0/"
+        }
+      }
+    }
+  },
+  "data": {
+    "type": "node--banner",
+    "id": "34fe2569-18f0-40d9-a727-a274e300d7d6",
+    "links": {
+      "self": {
+        "href": "http://milliface-base.beehomeplus.cn/jsonapi/node/banner/34fe2569-18f0-40d9-a727-a274e300d7d6?resourceVersion=id%3A10446"
+      }
+    },
+    "attributes": {
+      "status": true,
+      "title": "banner2",
+      "created": "2021-10-11T05:25:01+00:00",
+      "changed": "2021-10-11T05:37:55+00:00",
+      "promote": true,
+      "sticky": false,
+      "default_langcode": true,
+      "revision_translation_affected": true,
+      "body": null,
+      "field_banner_link": null
+    },
+    "relationships": {
+      "field_banner_image": {
+        "data": null
+      }
+    }
+  },
+  "included": [],
+  "links": {
+    "self": {
+      "href": "http://milliface-base.beehomeplus.cn/jsonapi/node/banner/6085d170-5ec1-4a22-b69e-ecdd41242eab?include=field_banner_image"
+    }
+  }
+}
+`
+	m = make(map[string]interface{})
+	json.Unmarshal([]byte(fixtureNilField), &m)
+	responder1, _ := httpmock.NewJsonResponder(http.StatusOK, m)
+	fakeUrl1 := "https://milliface-base.beehomeplus.cn/jsonapi/node/banner/da58cbf5-83a4-4850-8a6f-8d7618483ff7"
+	httpmock.RegisterResponder("GET", fakeUrl1, responder1)
+
 	c.SetHostURL("https://milliface-base.beehomeplus.cn/jsonapi")
 	return c
 }
@@ -390,6 +443,106 @@ func NodeBannerHttpMockWithIncluded() *resty.Client {
 	responder, _ := httpmock.NewJsonResponder(http.StatusOK, m)
 	fakeUrl := "https://milliface-base.beehomeplus.cn/jsonapi/node/banner/6085d170-5ec1-4a22-b69e-ecdd41242eab?include=field_banner_image"
 	httpmock.RegisterResponder("GET", fakeUrl, responder)
+
+	fixtureArrRelationship := `{
+  "jsonapi": {
+    "version": "1.0"
+  },
+  "data": {
+    "type": "node--banner",
+    "id": "6085d170-5ec1-4a22-b69e-ecdd41242eab",
+    "links": {
+    },
+    "attributes": {
+      "drupal_internal__nid": 9999,
+      "drupal_internal__vid": 10263,
+      "langcode": "en",
+      "revision_timestamp": "2021-09-29T17:50:53+00:00",
+      "revision_log": null,
+      "status": true,
+      "title": "test",
+      "created": "2021-09-29T17:49:27+00:00",
+      "changed": "2021-09-29T17:50:53+00:00",
+      "promote": true,
+      "sticky": false,
+      "default_langcode": true,
+      "revision_translation_affected": true,
+      "body": {
+        "value": "<p>test</p>\r\n",
+        "format": "fuwenben",
+        "processed": "<p>test</p>\n",
+        "summary": ""
+      },
+      "field_banner_link": {
+        "uri": "internal:/pages/topic/topic",
+        "title": "",
+        "options": []
+      }
+    },
+    "relationships": {
+      "uid": {
+        "data": {
+          "type": "user--user",
+          "id": "c862c0f4-9a5b-42ff-be6f-e5d323e90ed9"
+        },
+        "links": {
+        }
+      },
+      "field_banner_image": {
+        "data": [{
+          "type": "file--file",
+          "id": "db3b76f9-5020-47fb-beb0-5c5966c9740c",
+          "meta": {
+            "alt": "test banner",
+            "title": "",
+            "width": 1920,
+            "height": 960
+          }
+        }]
+      }
+    }
+  },
+  "included": [
+    {
+      "type": "file--file",
+      "id": "db3b76f9-5020-47fb-beb0-5c5966c9740c",
+      "links": {
+      },
+      "attributes": {
+        "drupal_internal__fid": 16950,
+        "langcode": "en",
+        "filename": "WechatIMG8660.jpeg",
+        "uri": {
+          "value": "public://2021-09/WechatIMG8660.jpeg",
+          "url": "/sites/default/files/2021-09/WechatIMG8660.jpeg"
+        },
+        "filemime": "image/jpeg",
+        "filesize": 296160,
+        "status": true,
+        "created": "2021-09-29T17:49:45+00:00",
+        "changed": "2021-09-29T17:50:19+00:00"
+      },
+      "relationships": {
+        "uid": {
+          "data": {
+            "type": "user--user",
+            "id": "c862c0f4-9a5b-42ff-be6f-e5d323e90ed9"
+          },
+          "links": {
+          }
+        }
+      }
+    }
+  ],
+  "links": {
+  }
+}`
+	m = make(map[string]interface{})
+	json.Unmarshal([]byte(fixtureArrRelationship), &m)
+	responder1, _ := httpmock.NewJsonResponder(http.StatusOK, m)
+	fakeUrl1 := "https://milliface-base.beehomeplus.cn/jsonapi/node/banner/6085d170-5ec1-4a22-b69e-ecdd41242eac?include=field_banner_image"
+
+	httpmock.RegisterResponder("GET", fakeUrl1, responder1)
 
 	c.SetHostURL("https://milliface-base.beehomeplus.cn/jsonapi")
 	return c

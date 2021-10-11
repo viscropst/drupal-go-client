@@ -100,8 +100,14 @@ func Test_entityStubMarshal(t *testing.T) {
 	em := &EntityManager{
 		client: fixture.NodeBannerHttpMockWithSingleData(),
 	}
-	entity, err := em.Request("node", "po").
+	entity1, err := em.Request("node", "banner").
 		Load("da58cbf5-83a4-4850-8a6f-8d7618483ff6")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	entity2, err := em.Request("node", "banner").
+		Load("da58cbf5-83a4-4850-8a6f-8d7618483ff7")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -129,7 +135,7 @@ func Test_entityStubMarshal(t *testing.T) {
 		{
 			name: "node article marshal",
 			args: args{
-				entity: entity,
+				entity: entity1,
 				stubs:  *stubs1,
 			},
 			want:    []byte(`{"banner_image":{"fid":"db3b76f9-5020-47fb-beb0-5c5966c9740c","langcode":"en","filename":"WechatIMG8660.jpeg","uri":{"value":"public://2021-09/WechatIMG8660.jpeg","url":"/sites/default/files/2021-09/WechatIMG8660.jpeg"},"filemime":"image/jpeg","filesize":296160,"status":true,"created":"2021-09-29T17:49:45+00:00","changed":"2021-09-29T17:50:19+00:00"},"body":{"format":"fuwenben","processed":"\u003cp\u003etest\u003c/p\u003e\n","summary":"","value":"\u003cp\u003etest\u003c/p\u003e\r\n"},"changed":"2021-09-29T17:50:53+00:00","created":"2021-09-29T17:49:27+00:00","default_langcode":true,"drupal_internal__nid":9999,"drupal_internal__vid":10263,"id":"6085d170-5ec1-4a22-b69e-ecdd41242eab","langcode":"en","link":{"options":[],"title":"","uri":"internal:/pages/topic/topic"},"promote":true,"revision_timestamp":"2021-09-29T17:50:53+00:00","revision_translation_affected":true,"status":true,"sticky":false,"title":"test","type":"node--banner"}`),
@@ -137,10 +143,18 @@ func Test_entityStubMarshal(t *testing.T) {
 		}, {
 			name: "no mapping mode ignore",
 			args: args{
-				entity: entity,
+				entity: entity1,
 				stubs:  *stubs2,
 			},
 			want:    []byte(`{"banner_image":{"fid":"db3b76f9-5020-47fb-beb0-5c5966c9740c","langcode":"en","filename":"WechatIMG8660.jpeg","uri":{"value":"public://2021-09/WechatIMG8660.jpeg","url":"/sites/default/files/2021-09/WechatIMG8660.jpeg"},"filemime":"image/jpeg","filesize":296160,"status":true,"created":"2021-09-29T17:49:45+00:00","changed":"2021-09-29T17:50:19+00:00"},"id":"6085d170-5ec1-4a22-b69e-ecdd41242eab","link":{"options":[],"title":"","uri":"internal:/pages/topic/topic"},"type":"node--banner"}`),
+			wantErr: false,
+		}, {
+			name: "nil relationship",
+			args: args{
+				entity: entity2,
+				stubs:  *stubs2,
+			},
+			want:    []byte(`{"banner_image":null,"id":"34fe2569-18f0-40d9-a727-a274e300d7d6","link":null,"type":"node--banner"}`),
 			wantErr: false,
 		},
 	}

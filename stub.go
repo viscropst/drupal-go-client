@@ -218,7 +218,7 @@ func entityStubMarshal(entity EntityCompatible, stubs StubConfigs) ([]byte, erro
 
 	for s, d := range stub.Mapping {
 		if field, err := entity.GetField(s); err != nil {
-			return nil, fmt.Errorf("entity get field: %v", err)
+			continue
 		} else {
 			if r, err := getEntityFieldValue(d.Type, field); err != nil {
 				return nil, fmt.Errorf("get entity field value: %v", err)

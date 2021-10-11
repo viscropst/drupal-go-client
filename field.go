@@ -126,24 +126,50 @@ func (f *Field) Float64() (float64, error) {
 	return 0, fmt.Errorf("field is not float64")
 }
 
+// todo relationship部分可能存在数组的情况，需要处理
 func (f *Field) File() (*File, error) {
-	payload := new(jsonapi.OnePayload)
-
-	buf := bytes.NewBuffer(nil)
-	err := json.NewEncoder(buf).Encode(f.raw)
-	if err != nil {
-		return nil, fmt.Errorf("raw encode: %v", err)
-	}
-	err = json.NewDecoder(buf).Decode(payload)
-	if err != nil {
-		return nil, fmt.Errorf("shallowNode decode: %v", err)
-	}
-
 	var node *jsonapi.Node
-	for _, n := range f.refPayload.Included {
-		if n.ID == payload.Data.ID {
-			node = n
-			break
+	{
+		payload := new(jsonapi.OnePayload)
+
+		buf := bytes.NewBuffer(nil)
+		err := json.NewEncoder(buf).Encode(f.raw)
+		if err != nil {
+			return nil, fmt.Errorf("raw encode: %v", err)
+		}
+		err = json.NewDecoder(buf).Decode(payload)
+		if err != nil {
+			// try to decode by ManyPayload
+			mPayload := new(jsonapi.ManyPayload)
+
+			buf = bytes.NewBuffer(nil)
+			err = json.NewEncoder(buf).Encode(f.raw)
+			if err != nil {
+				return nil, fmt.Errorf("raw many encode: %v", err)
+			}
+			err = json.NewDecoder(buf).Decode(mPayload)
+			if err != nil {
+				return nil, fmt.Errorf("raw many decode: %v", err)
+			}
+			if mPayload.Data == nil || len(mPayload.Data) == 0 {
+				return nil, nil
+			}
+			for _, n := range f.refPayload.Included {
+				if n.ID == mPayload.Data[0].ID {
+					node = n
+					break
+				}
+			}
+		} else {
+			if payload.Data == nil {
+				return nil, nil
+			}
+			for _, n := range f.refPayload.Included {
+				if n.ID == payload.Data.ID {
+					node = n
+					break
+				}
+			}
 		}
 	}
 
@@ -153,8 +179,8 @@ func (f *Field) File() (*File, error) {
 
 	file := new(File)
 
-	buf = bytes.NewBuffer(nil)
-	err = json.NewEncoder(buf).Encode(node.Attributes)
+	buf := bytes.NewBuffer(nil)
+	err := json.NewEncoder(buf).Encode(node.Attributes)
 	if err != nil {
 		return nil, fmt.Errorf("attr encode: %v", err)
 	}
@@ -163,7 +189,6 @@ func (f *Field) File() (*File, error) {
 	if err != nil {
 		return nil, fmt.Errorf("file decode: %v", err)
 	}
-
 	return file, nil
 }
 

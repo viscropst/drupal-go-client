@@ -24,6 +24,10 @@ func (q *Query) QueryParams() map[string]string {
 	return q.params
 }
 
+func (q *Query) SetQueryParams(p map[string]string) {
+	q.params = p
+}
+
 func (q *Query) Include(s []string) JsonapiQuery {
 	q.params["include"] = strings.Join(s, ",")
 	return q
