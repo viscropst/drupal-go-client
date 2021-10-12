@@ -231,7 +231,9 @@ func (e *EntityJsonapiRequest) Load(id string) (EntityCompatible, error) {
 	if e.Query != nil {
 		r.SetQueryParams(e.Query.QueryParams())
 	}
-
+	if e.Req != nil && e.Req.Header.Get("Authorization") != "" {
+		r = r.SetHeader("Authorization", e.Req.Header.Get("Authorization"))
+	}
 	resp, err := r.Get(fmt.Sprintf("/%s/%s/%s", e.entityType, e.bundle, id))
 	if err != nil {
 		return nil, fmt.Errorf("load %s", err)
@@ -254,7 +256,9 @@ func (e *EntityJsonapiRequest) LoadMultiple() ([]EntityCompatible, error) {
 	if e.Query != nil {
 		r.SetQueryParams(e.Query.QueryParams())
 	}
-
+	if e.Req != nil && e.Req.Header.Get("Authorization") != "" {
+		r = r.SetHeader("Authorization", e.Req.Header.Get("Authorization"))
+	}
 	resp, err := r.Get(fmt.Sprintf("/%s/%s", e.entityType, e.bundle))
 	if err != nil {
 		return nil, fmt.Errorf("loadMultiple %s", err)
