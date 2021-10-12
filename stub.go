@@ -82,7 +82,7 @@ type EntityStubMarshaler interface {
 	Marshal(v *Stub) ([]byte, error)
 }
 
-func entityStubUnmarshal(b []byte, stubs StubConfigs) (*jsonapi.OnePayload, error) {
+func entityStubUnmarshal(b []byte, stubs *StubConfigs) (*jsonapi.OnePayload, error) {
 	srcMap := make(map[string]interface{})
 	if err := json.Unmarshal(b, &srcMap); err != nil {
 		return nil, fmt.Errorf("unarmshal src map: %v", err)
@@ -98,7 +98,7 @@ func entityStubUnmarshal(b []byte, stubs StubConfigs) (*jsonapi.OnePayload, erro
 		return nil, errors.New("entity type in src must be string")
 	}
 
-	stub, ok := stubs[t]
+	stub, ok := (*stubs)[t]
 	if !ok {
 		return nil, errors.New("stub config not existed")
 	}
@@ -202,8 +202,8 @@ func shallowNodeFromMap(v interface{}) (*jsonapi.Node, error) {
 	return shallowNode, nil
 }
 
-func entityStubMarshal(entity EntityCompatible, stubs StubConfigs) ([]byte, error) {
-	stub, ok := stubs[entity.Type()]
+func entityStubTransform(entity EntityCompatible, stubs *StubConfigs) (map[string]interface{}, error) {
+	stub, ok := (*stubs)[entity.Type()]
 	if !ok {
 		return nil, errors.New("stub config not existed")
 	}
@@ -220,7 +220,7 @@ func entityStubMarshal(entity EntityCompatible, stubs StubConfigs) ([]byte, erro
 		if field, err := entity.GetField(s); err != nil {
 			continue
 		} else {
-			if r, err := getEntityFieldValue(d.Type, field); err != nil {
+			if r, err := getEntityFieldValue(d.Type, field, stubs); err != nil {
 				return nil, fmt.Errorf("get entity field value: %v", err)
 			} else {
 				resMap[d.Name] = r
@@ -249,7 +249,7 @@ func entityStubMarshal(entity EntityCompatible, stubs StubConfigs) ([]byte, erro
 				if err != nil {
 					return nil, fmt.Errorf("no mapping get field: %v", err)
 				}
-				r, err := getEntityFieldValue(f.t.String(), field)
+				r, err := getEntityFieldValue(f.t.String(), field, stubs)
 				if err != nil {
 					return nil, fmt.Errorf("no mapping get entity field value: %v", err)
 				}
@@ -261,6 +261,14 @@ func entityStubMarshal(entity EntityCompatible, stubs StubConfigs) ([]byte, erro
 		break
 	}
 
+	return resMap, nil
+}
+
+func entityStubMarshal(entity EntityCompatible, stubs *StubConfigs) ([]byte, error) {
+	resMap, err := entityStubTransform(entity, stubs)
+	if err != nil {
+		return nil, fmt.Errorf("transform: %v", err)
+	}
 	if res, err := json.Marshal(resMap); err != nil {
 		return nil, fmt.Errorf("result map marshal: %v", err)
 	} else {
@@ -268,7 +276,7 @@ func entityStubMarshal(entity EntityCompatible, stubs StubConfigs) ([]byte, erro
 	}
 }
 
-func getEntityFieldValue(t string, field *Field) (interface{}, error) {
+func getEntityFieldValue(t string, field *Field, stub *StubConfigs) (interface{}, error) {
 	var err error
 	var r interface{}
 	switch t {
@@ -305,6 +313,11 @@ func getEntityFieldValue(t string, field *Field) (interface{}, error) {
 	case "bool":
 		if r, err = field.Bool(); err != nil {
 			return nil, fmt.Errorf("field to bool: %v", err)
+		}
+		break
+	case "relation":
+		if r, err = field.Relation(true, stub); err != nil {
+			return nil, fmt.Errorf("field to relation: %v", err)
 		}
 		break
 	default:

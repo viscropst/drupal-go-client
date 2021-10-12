@@ -21,6 +21,42 @@ func NodeBannerTestSubConfigsJSON() []byte {
 	`)
 }
 
+func SimpleTestSubConfigsJSON() []byte {
+	return []byte(`
+		{
+			"articles": {
+				"entity_type": "articles",
+				"bundle": "",
+				"mapping": {
+					"author": {
+						"type": "relation",
+						"name": "author"
+					},
+					"comments": {
+						"type": "relation",
+						"name": "comments"
+					}
+				}
+			}, 
+			"people": {
+				"entity_type": "people",
+				"bundle": "",
+				"mapping": {}
+			},
+			"comments": {
+				"entity_type": "people",
+				"bundle": "",
+				"mapping": {
+					"author": {
+						"type": "relation",
+						"name": "author"
+					}
+				}
+			}
+		}
+	`)
+}
+
 func NodeBannerTestNoMappingIgnoreSubConfigsJSON() []byte {
 	return []byte(`
 		{

@@ -3,12 +3,13 @@ package drupal_go_client
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/google/jsonapi"
 	"reflect"
 )
 
-var supportDataTypes = []string{"string", "int32", "int64", "float32", "float64", "file", "bool", "raw"}
+var supportDataTypes = []string{"string", "int32", "int64", "float32", "float64", "file", "bool", "raw", "relation"}
 
 type Field struct {
 	raw        interface{}
@@ -126,7 +127,91 @@ func (f *Field) Float64() (float64, error) {
 	return 0, fmt.Errorf("field is not float64")
 }
 
-// todo relationship部分可能存在数组的情况，需要处理
+func (f *Field) Relation(include bool, stubs *StubConfigs) (interface{}, error) {
+	if f.IsRelationship {
+		fv := reflect.ValueOf(f.raw)
+
+		dk := reflect.ValueOf("data")
+		dv := fv.MapIndex(dk)
+
+		isSlice := reflect.ValueOf(dv.Interface()).Kind() == reflect.Slice
+		var payload interface{}
+		{
+			if isSlice {
+				payload = new(jsonapi.ManyPayload)
+			} else {
+				payload = new(jsonapi.OnePayload)
+			}
+
+			buf := bytes.NewBuffer(nil)
+			err := json.NewEncoder(buf).Encode(f.raw)
+			if err != nil {
+				return nil, fmt.Errorf("raw encode: %v", err)
+			}
+			err = json.NewDecoder(buf).Decode(payload)
+			if err != nil {
+				return nil, fmt.Errorf("raw decode: %v", err)
+			}
+		}
+
+		if include {
+			if isSlice {
+				res := make([]interface{}, 0)
+				p := payload.(*jsonapi.ManyPayload)
+				if p.Data == nil || len(p.Data) == 0 {
+					return nil, nil
+				}
+
+				for _, d := range p.Data {
+					for _, n := range f.refPayload.Included {
+						if n.ID == d.ID && n.Type == d.Type {
+							nestedEntity := &Entity{
+								payload: &jsonapi.OnePayload{Data: n, Included: f.refPayload.Included},
+							}
+							r, err := entityStubTransform(nestedEntity, stubs)
+							if err != nil {
+								return nil, fmt.Errorf("nested entity stub marhsal: %v", err)
+							}
+
+							res = append(res, r)
+						}
+					}
+				}
+
+				return res, nil
+			} else {
+				p := payload.(*jsonapi.OnePayload)
+				if p.Data == nil {
+					return nil, nil
+				}
+
+				for _, n := range f.refPayload.Included {
+					if n.ID == p.Data.ID && n.Type == p.Data.Type {
+						nestedEntity := &Entity{
+							payload: &jsonapi.OnePayload{
+								Data: n, Included: f.refPayload.Included,
+							},
+						}
+						r, err := entityStubTransform(nestedEntity, stubs)
+						if err != nil {
+							return nil, fmt.Errorf("nested entity stub marhsal: %v", err)
+						}
+
+						return r, nil
+					}
+				}
+
+				return nil, nil
+			}
+		}
+
+		return payload, nil
+	}
+
+	return nil, errors.New("field does not belong to relationship")
+}
+
+// deprecated
 func (f *Field) File() (*File, error) {
 	var node *jsonapi.Node
 	{

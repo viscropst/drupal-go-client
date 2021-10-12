@@ -1,6 +1,8 @@
 package drupal_go_client
 
 import (
+	"encoding/json"
+	"github.com/google/jsonapi"
 	"github.com/wangxb07/drupal-go-client/fixture"
 	"reflect"
 	"testing"
@@ -113,4 +115,172 @@ func TestFieldToTypeValue(t *testing.T) {
 		t.Errorf("File() got = %v, want %v", file, fileWant1)
 	}
 
+}
+
+func TestField_Relation(t *testing.T) {
+	oPayloadJSON := `{
+	  "links": {
+		"self": "http://example.com/articles/1/relationships/author",
+		"related": "http://example.com/articles/1/author"
+	  },
+	  "data": {
+		"type": "people",
+		"id": "9"
+	  }
+	}`
+
+	oPayloadRaw := new(interface{})
+	json.Unmarshal([]byte(oPayloadJSON), oPayloadRaw)
+
+	oPayload := new(jsonapi.OnePayload)
+	json.Unmarshal([]byte(oPayloadJSON), oPayload)
+
+	mPayloadJSON := `{
+	  "links": {
+		"self": "http://example.com/articles/1/relationships/comments",
+		"related": "http://example.com/articles/1/comments"
+	  },
+	  "data": [
+		{
+		  "type": "comments",
+		  "id": "5"
+		},
+		{
+		  "type": "comments",
+		  "id": "12"
+		}
+	  ]
+	}`
+	mPayloadRaw := new(interface{})
+	json.Unmarshal([]byte(mPayloadJSON), mPayloadRaw)
+
+	mPayload := new(jsonapi.ManyPayload)
+	json.Unmarshal([]byte(mPayloadJSON), mPayload)
+
+	simpleData := fixture.SimpleOnePayload()
+	e := &Entity{payload: simpleData}
+
+	stubs, err := NewStubConfigsFromJSON(fixture.SimpleTestSubConfigsJSON())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	fComments, _ := e.GetField("comments")
+	fAuthor, _ := e.GetField("author")
+
+	type fields struct {
+		raw            interface{}
+		name           string
+		refPayload     *jsonapi.OnePayload
+		IsRelationship bool
+	}
+	type args struct {
+		include bool
+		stubs   *StubConfigs
+	}
+	tests := []struct {
+		name    string
+		fields  fields
+		args    args
+		want    interface{}
+		wantErr bool
+	}{
+		{
+			name: "one payload relationship",
+			fields: fields{
+				raw:            *oPayloadRaw,
+				name:           "author",
+				refPayload:     nil,
+				IsRelationship: true,
+			},
+			args:    args{include: false, stubs: stubs},
+			want:    oPayload,
+			wantErr: false,
+		}, {
+			name: "many payload relationship",
+			fields: fields{
+				raw:            *mPayloadRaw,
+				name:           "author",
+				refPayload:     nil,
+				IsRelationship: true,
+			},
+			args:    args{include: false, stubs: stubs},
+			want:    mPayload,
+			wantErr: false,
+		}, {
+			name: "author relationship",
+			fields: fields{
+				raw:            fAuthor.raw,
+				name:           fAuthor.name,
+				refPayload:     fAuthor.refPayload,
+				IsRelationship: true,
+			},
+			args: args{include: true, stubs: stubs},
+			want: map[string]interface{}{
+				"id":        "9",
+				"type":      "people",
+				"firstName": "Dan",
+				"lastName":  "Gebhardt",
+				"twitter":   "dgeb",
+			},
+			wantErr: false,
+		}, {
+			name: "comments relationship",
+			fields: fields{
+				raw:            fComments.raw,
+				name:           fComments.name,
+				refPayload:     fComments.refPayload,
+				IsRelationship: true,
+			},
+			args: args{include: true, stubs: stubs},
+			want: []map[string]interface{}{
+				{
+					"author": nil,
+					"id":     "5",
+					"type":   "comments",
+					"body":   "First!",
+				},
+				{
+					"author": map[string]interface{}{
+						"id":        "9",
+						"type":      "people",
+						"firstName": "Dan",
+						"lastName":  "Gebhardt",
+						"twitter":   "dgeb",
+					},
+					"id":   "12",
+					"type": "comments",
+					"body": "I like XML better",
+				},
+			},
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			f := &Field{
+				raw:            tt.fields.raw,
+				name:           tt.fields.name,
+				refPayload:     tt.fields.refPayload,
+				IsRelationship: tt.fields.IsRelationship,
+			}
+			got, err := f.Relation(tt.args.include, tt.args.stubs)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Relation() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+
+			if tt.name == "comments relationship" {
+				gotJson, _ := json.Marshal(got)
+				wantJson, _ := json.Marshal(tt.want)
+				if string(gotJson) != string(wantJson) {
+					t.Errorf("Relation() got = %s, want %s", gotJson, wantJson)
+				}
+			} else {
+				if !reflect.DeepEqual(got, tt.want) {
+					t.Errorf("Relation() got = %v, want %v", got, tt.want)
+				}
+			}
+		})
+	}
 }

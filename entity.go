@@ -21,14 +21,14 @@ type EntityCompatible interface {
 	ID() string
 	GetField(f string) (*Field, error)
 	GetSchema() (*Schema, error)
-	Marshal(stubs StubConfigs) ([]byte, error)
+	Marshal(stubs *StubConfigs) ([]byte, error)
 }
 
 type Entity struct {
 	payload *jsonapi.OnePayload
 }
 
-func (e *Entity) Marshal(stubs StubConfigs) ([]byte, error) {
+func (e *Entity) Marshal(stubs *StubConfigs) ([]byte, error) {
 	return entityStubMarshal(e, stubs)
 }
 
@@ -146,7 +146,7 @@ func (e *EntityJsonapiRequest) WithQuery(query JsonapiQuery) *EntityJsonapiReque
 }
 
 func (e *EntityJsonapiRequest) Update(id string, b []byte) error {
-	payload, err := entityStubUnmarshal(b, *e.em.stubs)
+	payload, err := entityStubUnmarshal(b, e.em.stubs)
 	if err != nil {
 		return fmt.Errorf("entity unmarshal with stub: %v", err)
 	}
@@ -195,7 +195,7 @@ func (e *EntityJsonapiRequest) Delete(id string) error {
 }
 
 func (e *EntityJsonapiRequest) Create(b []byte) error {
-	payload, err := entityStubUnmarshal(b, *e.em.stubs)
+	payload, err := entityStubUnmarshal(b, e.em.stubs)
 	if err != nil {
 		return fmt.Errorf("entity unmarshal with stub: %v", err)
 	}
