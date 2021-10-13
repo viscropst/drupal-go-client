@@ -199,7 +199,7 @@ func TestEntityJsonapiRequest_Create(t *testing.T) {
 				bundle:     tt.fields.bundle,
 				Req:        tt.fields.Req,
 			}
-			if err := e.Create(tt.args.b); (err != nil) != tt.wantErr {
+			if _, err := e.Create(tt.args.b); (err != nil) != tt.wantErr {
 				t.Errorf("Create() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
@@ -315,7 +315,7 @@ func TestEntityJsonapiRequest_Update(t *testing.T) {
 				Req:        tt.fields.Req,
 				Query:      tt.fields.Query,
 			}
-			if err := e.WithRequest(origReq).Update(tt.args.id, tt.args.b); (err != nil) != tt.wantErr {
+			if _, err := e.WithRequest(origReq).Update(tt.args.id, tt.args.b); (err != nil) != tt.wantErr {
 				t.Errorf("Update() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})

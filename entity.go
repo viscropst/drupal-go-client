@@ -117,8 +117,8 @@ func (e *EntityManager) Request(t, b string) EntityRequest {
 }
 
 type EntityRequest interface {
-	Create(b []byte) error
-	Update(id string, b []byte) error
+	Create(b []byte) (EntityCompatible, error)
+	Update(id string, b []byte) (EntityCompatible, error)
 	Delete(id string) error
 	Load(id string) (EntityCompatible, error)
 	LoadMultiple() ([]EntityCompatible, error)
@@ -145,16 +145,17 @@ func (e *EntityJsonapiRequest) WithQuery(query JsonapiQuery) *EntityJsonapiReque
 	return e
 }
 
-func (e *EntityJsonapiRequest) Update(id string, b []byte) error {
+func (e *EntityJsonapiRequest) Update(id string, b []byte) (EntityCompatible, error) {
 	payload, err := entityStubUnmarshal(b, e.em.stubs)
 	if err != nil {
-		return fmt.Errorf("entity unmarshal with stub: %v", err)
+		return nil, fmt.Errorf("entity unmarshal with stub: %v", err)
 	}
 
 	r := e.em.client.R().
 		SetHeader("Content-Type", "application/vnd.api+json").
 		SetHeader("Accept", "application/vnd.api+json").
 		SetError(&jsonapi.ErrorsPayload{}).
+		SetResult(&jsonapi.OnePayload{}).
 		SetBody(payload)
 
 	if e.Req != nil && e.Req.Header.Get("Authorization") != "" {
@@ -163,15 +164,15 @@ func (e *EntityJsonapiRequest) Update(id string, b []byte) error {
 
 	resp, err := r.Patch(fmt.Sprintf("/%s/%s/%s", e.entityType, e.bundle, id))
 	if err != nil {
-		return fmt.Errorf("update %s", err)
+		return nil, fmt.Errorf("update %s", err)
 	}
 
 	jsonapiErr, ok := resp.Error().(*jsonapi.ErrorsPayload)
 	if ok && len(jsonapiErr.Errors) > 0 {
-		return jsonapiErr.Errors[0]
+		return nil, jsonapiErr.Errors[0]
 	}
 
-	return nil
+	return &Entity{payload: resp.Result().(*jsonapi.OnePayload)}, nil
 }
 
 func (e *EntityJsonapiRequest) Delete(id string) error {
@@ -194,16 +195,17 @@ func (e *EntityJsonapiRequest) Delete(id string) error {
 	return nil
 }
 
-func (e *EntityJsonapiRequest) Create(b []byte) error {
+func (e *EntityJsonapiRequest) Create(b []byte) (EntityCompatible, error) {
 	payload, err := entityStubUnmarshal(b, e.em.stubs)
 	if err != nil {
-		return fmt.Errorf("entity unmarshal with stub: %v", err)
+		return nil, fmt.Errorf("entity unmarshal with stub: %v", err)
 	}
 
 	r := e.em.client.R().
 		SetHeader("Content-Type", "application/vnd.api+json").
 		SetHeader("Accept", "application/vnd.api+json").
 		SetError(&jsonapi.ErrorsPayload{}).
+		SetResult(&jsonapi.OnePayload{}).
 		SetBody(payload)
 
 	if e.Req != nil && e.Req.Header.Get("Authorization") != "" {
@@ -212,15 +214,15 @@ func (e *EntityJsonapiRequest) Create(b []byte) error {
 
 	resp, err := r.Post(fmt.Sprintf("/%s/%s", e.entityType, e.bundle))
 	if err != nil {
-		return fmt.Errorf("create %s", err)
+		return nil, fmt.Errorf("create %s", err)
 	}
 
 	jsonapiErr, ok := resp.Error().(*jsonapi.ErrorsPayload)
 	if ok && len(jsonapiErr.Errors) > 0 {
-		return jsonapiErr.Errors[0]
+		return nil, jsonapiErr.Errors[0]
 	}
 
-	return nil
+	return &Entity{payload: resp.Result().(*jsonapi.OnePayload)}, nil
 }
 
 func (e *EntityJsonapiRequest) Load(id string) (EntityCompatible, error) {
