@@ -148,6 +148,9 @@ func entityStubUnmarshal(b []byte, stubs *StubConfigs) (*jsonapi.OnePayload, err
 					Data: n,
 				}
 				break
+			} else {
+				// map but can't unmarshal to shallow node, return raw
+				attrs[k] = v
 			}
 		case reflect.Slice:
 			s := reflect.ValueOf(v)

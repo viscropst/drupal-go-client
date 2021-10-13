@@ -239,7 +239,8 @@ func Test_entityStubUnmarshal(t *testing.T) {
 		"entity_type": "node",
 		"bundle": "article",
 		"mapping": {
-			"foo": { "name": "bar", "type": "string" }
+			"foo": { "name": "bar", "type": "string" },
+			"raw_data": { "name": "my_data", "type": "raw" }
 		}
 	}
 }
@@ -262,7 +263,7 @@ func Test_entityStubUnmarshal(t *testing.T) {
 		{
 			name: "normal",
 			args: args{
-				b:     []byte(`{"id": "1", "type": "node--article", "title": "JSON:API paints my bikeshed!","bar": "hello world", "author": {"type": "people", "id": "9"}}`),
+				b:     []byte(`{"id": "1", "type": "node--article", "title": "JSON:API paints my bikeshed!","bar": "hello world", "my_data": {"my_field": "some data"}, "author": {"type": "people", "id": "9"}}`),
 				stubs: stubs1,
 			},
 			want: &jsonapi.OnePayload{
@@ -270,8 +271,9 @@ func Test_entityStubUnmarshal(t *testing.T) {
 					Type: "node--article",
 					ID:   "1",
 					Attributes: map[string]interface{}{
-						"title": "JSON:API paints my bikeshed!",
-						"foo":   "hello world",
+						"title":    "JSON:API paints my bikeshed!",
+						"foo":      "hello world",
+						"raw_data": map[string]interface{}{"my_field": "some data"},
 					},
 					Relationships: map[string]interface{}{
 						"author": jsonapi.OnePayload{
@@ -344,13 +346,13 @@ func Test_entityStubUnmarshal(t *testing.T) {
 				},
 			},
 			wantErr: false,
-		},{
+		}, {
 			name: "lose type",
 			args: args{
 				b:     []byte(`{"title": "JSON:API paints my bikeshed!","bar": "hello world", "author": {"type": "people", "id": "9"}}`),
 				stubs: stubs1,
 			},
-			want: nil,
+			want:    nil,
 			wantErr: true,
 		},
 	}
