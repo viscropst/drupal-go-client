@@ -29,8 +29,8 @@ func TestFieldToTypeValue(t *testing.T) {
 
 	titleField, _ := entity.GetField("title")
 	s, _ := titleField.String()
-	if s != "test" {
-		t.Errorf("titleField.String not equal test, got %s", s)
+	if *s != "test" {
+		t.Errorf("titleField.String not equal test, got %v", s)
 	}
 
 	_, err = titleField.Int32()
@@ -40,13 +40,13 @@ func TestFieldToTypeValue(t *testing.T) {
 
 	nidField, _ := entity.GetField("drupal_internal__nid")
 	filesize, err := nidField.Float64()
-	if filesize != 9999 {
-		t.Errorf("expect filesize 9999, got %f", filesize)
+	if *filesize != 9999 {
+		t.Errorf("expect filesize 9999, got %v", filesize)
 	}
 
 	stickyField, _ := entity.GetField("sticky")
 	sticky, _ := stickyField.Bool()
-	if sticky != false {
+	if *sticky != false {
 		t.Errorf("expect sticky false, got %v", sticky)
 	}
 
@@ -115,6 +115,37 @@ func TestFieldToTypeValue(t *testing.T) {
 		t.Errorf("File() got = %v, want %v", file, fileWant1)
 	}
 
+	// raw is null handle
+	fLog, _ := entity.GetField("revision_log")
+	fLogStr, _ := fLog.String()
+	if fLogStr != nil {
+		t.Errorf("null field to string should return empty, but %v", fLogStr)
+	}
+
+	fLogInt64, _ := fLog.Int64()
+	if fLogInt64 != nil {
+		t.Errorf("null field to int64 should return 0, but %v", fLogInt64)
+	}
+
+	fLogInt32, _ := fLog.Int32()
+	if fLogInt32 != nil {
+		t.Errorf("null field to Int32 should return 0, but %v", fLogInt32)
+	}
+
+	fLogFloat64, _ := fLog.Float64()
+	if fLogFloat64 != nil {
+		t.Errorf("null field to Float64 should return 0, but %v", fLogFloat64)
+	}
+
+	fLogFloat32, _ := fLog.Float32()
+	if fLogFloat32 != nil {
+		t.Errorf("null field to Float32 should return 0, but %v", fLogFloat32)
+	}
+
+	fLogBool, _ := fLog.Bool()
+	if fLogBool != nil {
+		t.Errorf("null field to Bool should return 0, but %v", fLogBool)
+	}
 }
 
 func TestField_Relation(t *testing.T) {
@@ -271,7 +302,10 @@ func TestField_Relation(t *testing.T) {
 			}
 
 			if tt.name == "comments relationship" {
-				gotJson, _ := json.Marshal(got)
+				gotJson, err := json.Marshal(got)
+				if err != nil {
+					t.Fatal(err)
+				}
 				wantJson, _ := json.Marshal(tt.want)
 				if string(gotJson) != string(wantJson) {
 					t.Errorf("Relation() got = %s, want %s", gotJson, wantJson)

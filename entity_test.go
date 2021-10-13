@@ -68,8 +68,8 @@ func TestLoadMultiple(t *testing.T) {
 
 	titleField, _ := entities[0].GetField("title")
 	s, _ := titleField.String()
-	if s != "test" {
-		t.Errorf("expect title is test, got %s", s)
+	if *s != "test" {
+		t.Errorf("expect title is test, got %v", s)
 	}
 
 	c2 := fixture.NodeBannerHttpMockNotFound()

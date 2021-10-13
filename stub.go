@@ -292,7 +292,7 @@ func getEntityFieldValue(t string, field *Field, stub *StubConfigs) (interface{}
 		break
 	case "int64":
 		if r, err = field.Int64(); err != nil {
-			return nil, fmt.Errorf("field to int32: %v", err)
+			return nil, fmt.Errorf("field to int64: %v", err)
 		}
 		break
 	case "float32":
@@ -319,10 +319,15 @@ func getEntityFieldValue(t string, field *Field, stub *StubConfigs) (interface{}
 		if r, err = field.Relation(true, stub); err != nil {
 			return nil, fmt.Errorf("field to relation: %v", err)
 		}
-		break
+		return r, nil
 	default:
 		r = field.Raw()
+		return r, nil
 	}
 
-	return r, nil
+	if reflect.ValueOf(r).IsNil() {
+		return nil, nil
+	}
+
+	return reflect.ValueOf(r).Elem().Interface(), nil
 }

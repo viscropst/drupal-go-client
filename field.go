@@ -3,7 +3,6 @@ package drupal_go_client
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"github.com/google/jsonapi"
 	"reflect"
@@ -55,76 +54,110 @@ func (f *Field) Raw() interface{} {
 	return f.raw
 }
 
-func (f *Field) String() (string, error) {
+func (f *Field) Name() string {
+	return f.name
+}
+
+func (f *Field) String() (*string, error) {
 	if f.IsRelationship {
-		return "", fmt.Errorf("field is relatiionship")
+		return nil, fmt.Errorf("field %s is relatiionship", f.name)
 	}
+
+	if f.raw == nil {
+		return nil, nil
+	}
+
 	s, ok := f.raw.(string)
 	if ok {
-		return s, nil
+		return &s, nil
 	}
 
-	return "", fmt.Errorf("field is not a string")
+	return nil, fmt.Errorf("field %s is not a string", f.name)
 }
 
-func (f *Field) Int32() (int32, error) {
+func (f *Field) Int32() (*int32, error) {
 	if f.IsRelationship {
-		return 0, fmt.Errorf("field is relatiionship")
+		return nil, fmt.Errorf("field %s is relatiionship", f.name)
 	}
+
+	if f.raw == nil {
+		return nil, nil
+	}
+
 	s, ok := f.raw.(int32)
 	if ok {
-		return s, nil
+		return &s, nil
 	}
 
-	return 0, fmt.Errorf("field is not int32")
+	return nil, fmt.Errorf("field %s is not int32", f.name)
 }
 
-func (f *Field) Int64() (int64, error) {
+func (f *Field) Int64() (*int64, error) {
 	if f.IsRelationship {
-		return 0, fmt.Errorf("field is relatiionship")
+		return nil, fmt.Errorf("field %s is relatiionship", f.name)
 	}
+
+	if f.raw == nil {
+		return nil, nil
+	}
+
 	s, ok := f.raw.(int64)
 	if ok {
-		return s, nil
+		return &s, nil
 	}
 
-	return 0, fmt.Errorf("field is not int64")
+	return nil, fmt.Errorf("field %s is not int64", f.name)
 }
 
-func (f *Field) Bool() (bool, error) {
+func (f *Field) Bool() (*bool, error) {
 	if f.IsRelationship {
-		return false, fmt.Errorf("field is relatiionship")
+		return nil, fmt.Errorf("field %s is relatiionship", f.name)
 	}
+
+	if f.raw == nil {
+		return nil, nil
+	}
+
 	s, ok := f.raw.(bool)
 	if ok {
-		return s, nil
+		return &s, nil
 	}
 
-	return false, fmt.Errorf("field is not bool")
+	return nil, fmt.Errorf("field %s is not bool", f.name)
 }
 
-func (f *Field) Float32() (float32, error) {
+func (f *Field) Float32() (*float32, error) {
 	if f.IsRelationship {
-		return 0, fmt.Errorf("field is relatiionship")
+		return nil, fmt.Errorf("field %s is relatiionship", f.name)
 	}
+
+	if f.raw == nil {
+		return nil, nil
+	}
+
 	s, ok := f.raw.(float32)
 	if ok {
-		return s, nil
+		return &s, nil
 	}
 
-	return 0, fmt.Errorf("field is not float32")
+	return nil, fmt.Errorf("field %s is not float32", f.name)
 }
 
-func (f *Field) Float64() (float64, error) {
+func (f *Field) Float64() (*float64, error) {
 	if f.IsRelationship {
-		return 0, fmt.Errorf("field is relatiionship")
-	}
-	s, ok := f.raw.(float64)
-	if ok {
-		return s, nil
+		return nil, fmt.Errorf("field %s is relatiionship", f.name)
 	}
 
-	return 0, fmt.Errorf("field is not float64")
+	if f.raw == nil {
+		return nil, nil
+	}
+
+	s, ok := f.raw.(float64)
+	if ok {
+		return &s, nil
+	}
+
+	return nil, fmt.Errorf("field %s is not float64", f.name)
 }
 
 func (f *Field) Relation(include bool, stubs *StubConfigs) (interface{}, error) {
@@ -146,11 +179,11 @@ func (f *Field) Relation(include bool, stubs *StubConfigs) (interface{}, error) 
 			buf := bytes.NewBuffer(nil)
 			err := json.NewEncoder(buf).Encode(f.raw)
 			if err != nil {
-				return nil, fmt.Errorf("raw encode: %v", err)
+				return nil, fmt.Errorf("field %s raw encode: %v", f.name, err)
 			}
 			err = json.NewDecoder(buf).Decode(payload)
 			if err != nil {
-				return nil, fmt.Errorf("raw decode: %v", err)
+				return nil, fmt.Errorf("field %s raw decode: %v", err, err)
 			}
 		}
 
@@ -170,7 +203,7 @@ func (f *Field) Relation(include bool, stubs *StubConfigs) (interface{}, error) 
 							}
 							r, err := entityStubTransform(nestedEntity, stubs)
 							if err != nil {
-								return nil, fmt.Errorf("nested entity stub marhsal: %v", err)
+								return nil, fmt.Errorf("field %s nested entity stub marhsal: %v", f.name, err)
 							}
 
 							res = append(res, r)
@@ -194,7 +227,7 @@ func (f *Field) Relation(include bool, stubs *StubConfigs) (interface{}, error) 
 						}
 						r, err := entityStubTransform(nestedEntity, stubs)
 						if err != nil {
-							return nil, fmt.Errorf("nested entity stub marhsal: %v", err)
+							return nil, fmt.Errorf("field %s nested entity stub marhsal: %v", f.name, err)
 						}
 
 						return r, nil
@@ -208,7 +241,7 @@ func (f *Field) Relation(include bool, stubs *StubConfigs) (interface{}, error) 
 		return payload, nil
 	}
 
-	return nil, errors.New("field does not belong to relationship")
+	return nil, fmt.Errorf("field %s does not belong to relationship", f.name)
 }
 
 // deprecated
@@ -279,7 +312,7 @@ func (f *Field) File() (*File, error) {
 
 func (f *Field) Unmarshal(model interface{}) error {
 	if f.IsRelationship {
-		return fmt.Errorf("field is relatiionship")
+		return fmt.Errorf("field %s is relatiionship", f.name)
 	}
 
 	buf := bytes.NewBuffer(nil)
