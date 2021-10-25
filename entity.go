@@ -138,7 +138,7 @@ type EntityJsonapiRequest struct {
 	metaRet    map[string]interface{}
 }
 
-func (e *EntityJsonapiRequest) GetMetaAfterLoad(key string) interface{} {
+func (e *EntityJsonapiRequest) GetMeta(key string) interface{} {
 	if !e.loaded {
 		panic("please call this after loaded")
 	}
@@ -260,9 +260,11 @@ func (e *EntityJsonapiRequest) Load(id string) (EntityCompatible, error) {
 		return nil, jsonapiErr.Errors[0]
 	}
 
-	e.afterResponse(resp)
+	p := resp.Result().(*jsonapi.OnePayload)
 
-	return &Entity{payload: resp.Result().(*jsonapi.OnePayload)}, nil
+	e.afterResponse(p)
+
+	return &Entity{payload: p}, nil
 }
 
 func (e *EntityJsonapiRequest) LoadMultiple() ([]EntityCompatible, error) {
@@ -287,11 +289,10 @@ func (e *EntityJsonapiRequest) LoadMultiple() ([]EntityCompatible, error) {
 		return nil, jsonapiErr.Errors[0]
 	}
 
-	e.afterResponse(resp)
-
 	// ManyPayload to OnePayload slice
 	res := make([]EntityCompatible, 0)
 	p := resp.Result().(*jsonapi.ManyPayload)
+	e.afterResponse(p)
 	for _, n := range p.Data {
 		entity := &Entity{
 			payload: &jsonapi.OnePayload{
@@ -307,8 +308,8 @@ func (e *EntityJsonapiRequest) LoadMultiple() ([]EntityCompatible, error) {
 	return res, nil
 }
 
-func (e *EntityJsonapiRequest) afterResponse(resp *resty.Response) {
-	switch v := resp.Result().(type) {
+func (e *EntityJsonapiRequest) afterResponse(resp interface{}) {
+	switch v := resp.(type) {
 	case *jsonapi.OnePayload:
 		e.metaRet = *v.Meta
 	case *jsonapi.ManyPayload:

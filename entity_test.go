@@ -68,7 +68,7 @@ func TestLoadMultiple(t *testing.T) {
 		t.Errorf("expect entities length 1, got %d", len(entities))
 	}
 
-	value := req.GetMetaAfterLoad("count").(string)
+	value := req.GetMeta("count").(string)
 	count, _ := strconv.Atoi(value)
 	if count != 1 {
 		t.Errorf("expect meta.count is 1, got %v", count)
