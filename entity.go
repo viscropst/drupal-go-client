@@ -2,10 +2,11 @@ package drupal_go_client
 
 import (
 	"fmt"
-	"github.com/go-resty/resty/v2"
-	"github.com/google/jsonapi"
 	"net/http"
 	"reflect"
+
+	"github.com/go-resty/resty/v2"
+	"github.com/google/jsonapi"
 )
 
 type Schema struct {
@@ -130,9 +131,18 @@ type EntityRequest interface {
 type EntityJsonapiRequest struct {
 	em         *EntityManager
 	entityType string
+	loaded     bool
 	bundle     string
 	Req        *http.Request
 	Query      JsonapiQuery
+	metaRet    map[string]interface{}
+}
+
+func (e *EntityJsonapiRequest) GetMeta(key string) interface{} {
+	if !e.loaded {
+		panic("please call this after loaded")
+	}
+	return e.metaRet[key]
 }
 
 func (e *EntityJsonapiRequest) WithRequest(req *http.Request) *EntityJsonapiRequest {
@@ -171,6 +181,8 @@ func (e *EntityJsonapiRequest) Update(id string, b []byte) (EntityCompatible, er
 	if ok && len(jsonapiErr.Errors) > 0 {
 		return nil, jsonapiErr.Errors[0]
 	}
+
+	e.afterResponse(resp)
 
 	return &Entity{payload: resp.Result().(*jsonapi.OnePayload)}, nil
 }
@@ -222,6 +234,8 @@ func (e *EntityJsonapiRequest) Create(b []byte) (EntityCompatible, error) {
 		return nil, jsonapiErr.Errors[0]
 	}
 
+	e.afterResponse(resp)
+
 	return &Entity{payload: resp.Result().(*jsonapi.OnePayload)}, nil
 }
 
@@ -246,7 +260,11 @@ func (e *EntityJsonapiRequest) Load(id string) (EntityCompatible, error) {
 		return nil, jsonapiErr.Errors[0]
 	}
 
-	return &Entity{payload: resp.Result().(*jsonapi.OnePayload)}, nil
+	p := resp.Result().(*jsonapi.OnePayload)
+
+	e.afterResponse(p)
+
+	return &Entity{payload: p}, nil
 }
 
 func (e *EntityJsonapiRequest) LoadMultiple() ([]EntityCompatible, error) {
@@ -274,6 +292,7 @@ func (e *EntityJsonapiRequest) LoadMultiple() ([]EntityCompatible, error) {
 	// ManyPayload to OnePayload slice
 	res := make([]EntityCompatible, 0)
 	p := resp.Result().(*jsonapi.ManyPayload)
+	e.afterResponse(p)
 	for _, n := range p.Data {
 		entity := &Entity{
 			payload: &jsonapi.OnePayload{
@@ -287,4 +306,14 @@ func (e *EntityJsonapiRequest) LoadMultiple() ([]EntityCompatible, error) {
 	}
 
 	return res, nil
+}
+
+func (e *EntityJsonapiRequest) afterResponse(resp interface{}) {
+	switch v := resp.(type) {
+	case *jsonapi.OnePayload:
+		e.metaRet = *v.Meta
+	case *jsonapi.ManyPayload:
+		e.metaRet = *v.Meta
+	}
+	e.loaded = true
 }

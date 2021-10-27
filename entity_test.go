@@ -1,11 +1,13 @@
 package drupal_go_client
 
 import (
-	"github.com/google/jsonapi"
-	"github.com/wangxb07/drupal-go-client/fixture"
 	"net/http"
 	"reflect"
+	"strconv"
 	"testing"
+
+	"github.com/google/jsonapi"
+	"github.com/wangxb07/drupal-go-client/fixture"
 )
 
 func TestLoad(t *testing.T) {
@@ -54,16 +56,22 @@ func TestLoadMultiple(t *testing.T) {
 		Page(0, 10).
 		Sort([]string{"created"})
 
-	entities, err := em.
+	req := em.
 		Request("node", "banner").
-		WithQuery(q).
-		LoadMultiple()
+		WithQuery(q)
+	entities, err := req.LoadMultiple()
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	if len(entities) != 1 {
 		t.Errorf("expect entities length 1, got %d", len(entities))
+	}
+
+	value := req.GetMeta("count").(string)
+	count, _ := strconv.Atoi(value)
+	if count != 1 {
+		t.Errorf("expect meta.count is 1, got %v", count)
 	}
 
 	titleField, _ := entities[0].GetField("title")
